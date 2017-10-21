@@ -176,23 +176,24 @@ public:
         if(ti[0] < SlotNo || PageNo <= 0)
             return NULL;
         
-        length = ti[SlotNo*2];
+        ushort length = ti[SlotNo*2];
         ushort startPos = ti[SlotNo*2+1];
 
         t[PageNo] -= (length * 2 + 4);    // 维护首页
         ti[0] --;
         ti[1] += length;
-        for(ushort i = ti[SlotNo*2+1] + ti[SlotNo*2] - 1; i > ti[1]; i--)
+        for(ushort i = ti[SlotNo*2+1] + ti[SlotNo*2] - 1; i >= ti[1]; i--)
             ti[i] = ti[i-length];
         for(ushort i = SlotNo; i <= ti[0]; i++)
         {
-            t[i*2] = t[i*2+2];
-            t[i*2+1] = t[i*2+3] + length;
+            ti[i*2] = ti[i*2+2];
+            ti[i*2+1] = ti[i*2+3] + length;
         }
-        
+        cout << "ti[5] = " << ti[5] << endl;
+        cout << "SlotNo = " << SlotNo << endl;
         bpm.close();
         f.closeFile(fileID);
-        return &u[0];
+        return true;
     }
 };
 
