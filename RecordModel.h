@@ -23,7 +23,7 @@ using namespace std;
  *  insertRecord(string tableName, string record)
  *      根据表名和json记录插入数据
  *  searchRecord(string tableName, string key, string, bool head, ushort& PageNo, ushort& SlotNo)
- *      根据表名和key,value查询一条数据,head表示是否从头开始查找，如果不是那么需要给定PageNo和SlotNo;
+ *      根据表名和key,value查询一条数据,head表示是否从头开始查找，如果不是，那么需要给定PageNo和SlotNo;
  *      从（PageNo，SlotNo）开始查找，作为第一个check的项;
  *      返回json数据，数据堆RID （PageNo，SlotNo）
  *  deleteRecord(string tableName, ushort PageNo, ushort SlotNo)
