@@ -1,6 +1,6 @@
 #include<iostream>
 #include "RecordManager.h"
-
+#include "RecordModel.h"
 using namespace std;
 int main()
 {
@@ -29,5 +29,9 @@ int main()
     rm -> deleteRecord("test", 1, 2);
     r = rm -> searchRecord("test", 1, 2, l);
     cout << "r[0] = " << r[0] << endl;
+
+    RecordModel rml;
+    rml.createFile("testmodel");
+    rml.deleteFile("testmodel");
     return 0;
 }

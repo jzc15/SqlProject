@@ -40,9 +40,7 @@ public:
     RecordManager(string databaseName)
     {
         this->databaseName = databaseName;
-        string dirname = databaseName;
-        mkdir(dirname.c_str() ,0755);
-        
+        mkdir(databaseName.c_str() ,0755);
     }
 
     bool createRecord(string tableName, ushortList buf, BufLength length)
