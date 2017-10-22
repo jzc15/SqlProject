@@ -43,7 +43,7 @@ public:
         mkdir(databaseName.c_str() ,0755);
     }
 
-    bool createRecord(string tableName, ushortList buf, BufLength length)
+    bool createRecord(string tableName, bitList buf, BufLength length)
     {
         FileManager f;
         string filepath = databaseName + "/" + tableName;
@@ -63,7 +63,7 @@ public:
         ushort ExistPageCnt;
         ExistPageCnt = t[0];
         ushort i = 1;
-        ushort dataSize = length * BufLengthSize;
+        ushort dataSize = length;
         ushort bothSize = dataSize + 4;
         while(i <= ExistPageCnt)
         {
@@ -80,14 +80,14 @@ public:
         BufType bi = bpm.getPage(fileID, i, index);
         bpm.markDirty(index);
         ushortList ti = (ushortList) bi;
-
+        bitList b = (bitList) bi;
         if(ExistPageCnt < i)                  //创建新页
         {
             if(ExistPageCnt == MAX_SHORT_CNT)
                 return false;
             t[0] ++;
             ti[0] = 0;
-            ti[1] = 4096;
+            ti[1] = PAGE_SIZE;
             t[i] = 4;
         }
         t[i] += bothSize;
@@ -99,7 +99,7 @@ public:
         ti[0] ++;
         ti[1] -= length;
         for(i = 0; i < length; i++)
-            ti[ti[1] + i] = buf[i];
+            b[ti[1] + i] = buf[i];
         /*
         cout << "ti[0]" << " = " <<  ti[0] << endl;
         cout << "ti[1]" << " = " << ti[1] << endl;
@@ -112,7 +112,7 @@ public:
         return true;
     }
 
-    ushortList searchRecord(string tableName, ushort PageNo, ushort SlotNo, ushort &length)
+    bitList searchRecord(string tableName, ushort PageNo, ushort SlotNo, ushort &length)
     {
         FileManager f;
         string filepath = databaseName + "/" + tableName;
@@ -137,16 +137,16 @@ public:
         BufType bi = bpm.getPage(fileID, PageNo, index);
         bpm.access(index);
         ushortList ti = (ushortList) bi;
-        
+        bitList b = (bitList) bi;
         if(ti[0] < SlotNo || PageNo <= 0)
             return NULL;
         
         length = ti[SlotNo*2];
         ushort startPos = ti[SlotNo*2+1];
-        ushortList u = new ushort[length];
+        bitList u = new char[length];           // FIXME
 
         for(ushort i = 0; i < length; i++)
-            u[i] = ti[startPos+i];
+            u[i] = b[startPos+i];
         bpm.close();
         f.closeFile(fileID);
         return &u[0];
@@ -177,7 +177,8 @@ public:
         BufType bi = bpm.getPage(fileID, PageNo, index);
         bpm.markDirty(index);
         ushortList ti = (ushortList) bi;
-        
+        bitList b = (bitList) bi;
+
         if(ti[0] < SlotNo || PageNo <= 0)
             return NULL;
         
@@ -188,7 +189,7 @@ public:
         ti[0] --;
         ti[1] += length;
         for(ushort i = ti[SlotNo*2+1] + ti[SlotNo*2] - 1; i >= ti[1]; i--)
-            ti[i] = ti[i-length];
+            b[i] = b[i-length];
         for(ushort i = SlotNo; i <= ti[0]; i++)
         {
             ti[i*2] = ti[i*2+2];

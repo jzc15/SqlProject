@@ -57,5 +57,6 @@ int tt = 0;
 
 typedef unsigned short* ushortList;
 typedef unsigned short BufLength;
+typedef char* bitList;
 #define BufLengthSize 2
 #endif
