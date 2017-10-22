@@ -1,6 +1,3 @@
-[submodule "build/json11"]
-	path = build/json11
-	url = https://github.com/dropbox/json11.git
 [submodule "json11"]
 	path = json11
 	url = https://github.com/dropbox/json11.git

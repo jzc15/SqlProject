@@ -1,5 +1,6 @@
 #ifndef PAGE_DEF
 #define PAGE_DEF
+
 #include <unistd.h>
 #include <errno.h>
 #include <stdio.h>
@@ -52,10 +53,11 @@ typedef long long ll;
 typedef double db;
 typedef int INT;
 typedef int(cf)(uchar*, uchar*);
-int current = 0;
-int tt = 0;
+extern int current;
+extern int tt;
 
 typedef unsigned short* ushortList;
 typedef unsigned short BufLength;
 #define BufLengthSize 2
+
 #endif
