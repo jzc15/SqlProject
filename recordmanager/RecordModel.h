@@ -4,7 +4,7 @@
 #include<iostream>
 #include <sys/stat.h>
 #include "RecordManager.h"
-
+#include "common/Record.h"
 using namespace std;
 /*
  *  接口总结
@@ -20,7 +20,7 @@ using namespace std;
  *      根据fileID关闭文件
  *  closeFile(string filename)
  *      根据文件名关闭文件
- *  insertRecord(string tableName, string record)
+ *  insertRecord(string tableName, Record record)
  *      根据表名和json记录插入数据
  *  searchRecord(string tableName, string key, string, bool head, ushort& PageNo, ushort& SlotNo)
  *      根据表名和key,value查询一条数据,head表示是否从头开始查找，如果不是，那么需要给定PageNo和SlotNo;
@@ -28,7 +28,7 @@ using namespace std;
  *      返回json数据，数据堆RID （PageNo，SlotNo）
  *  deleteRecord(string tableName, ushort PageNo, ushort SlotNo)
  *      根据PageNo和SlotNo删除指定数据
- *  updateRecord(string tableName, string record， ushort PageNo, ushort SlotNo)
+ *  updateRecord(string tableName, Record record， ushort PageNo, ushort SlotNo)
  *      根据PageNo和SlotNo，将此数据更新为record
  * 
  *  待实现接口
@@ -52,10 +52,10 @@ public:
     int openFile(string filename);
     bool closeFile(int fileID);
     bool closeFile(string filename);
-    bool insertRecord(string tableName, string record);
-    string searchRecord(string tableName, string key, string, bool head, ushort& PageNo, ushort& SlotNo);
+    bool insertRecord(string tableName, Record record);
+    bitList searchRecord(string tableName, string key, string, bool head, ushort& PageNo, ushort& SlotNo);
     bool deleteRecord(string tableName, ushort PageNo, ushort SlotNo);
-    bool updateRecord(string tableName, string record, ushort PageNo, ushort SlotNo);
+    bool updateRecord(string tableName, Record record, ushort PageNo, ushort SlotNo);
 };
 
 #endif

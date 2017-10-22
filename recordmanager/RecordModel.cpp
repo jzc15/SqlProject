@@ -44,7 +44,7 @@ bool RecordModel::closeFile(string filename)
     fm.openFile(filename.c_str(), fileID);
     return fm.closeFile(fileID);
 }
-bool RecordModel::insertRecord(string tableName, string record)
+bool RecordModel::insertRecord(string tableName, Record record)
 {
     bitList u;
     ushort length = -1;
@@ -54,7 +54,7 @@ bool RecordModel::insertRecord(string tableName, string record)
     rm.createRecord(tableName, u, length);
     return true;
 }
-string RecordModel::searchRecord(string tableName, string key, string, bool head, ushort& PageNo, ushort& SlotNo)
+bitList RecordModel::searchRecord(string tableName, string key, string, bool head, ushort& PageNo, ushort& SlotNo)
 {
     if(head)
         PageNo = SlotNo = 1;
@@ -65,16 +65,16 @@ string RecordModel::searchRecord(string tableName, string key, string, bool head
         u = rm.searchRecord(tableName, PageNo, SlotNo, length);
         //if(check(databaseName, tableName, u, length, key, value)) break;
         if(!rm.nextRecord(tableName, PageNo, SlotNo))
-            return "{error: \"PageNo or SlotNo invalid, or Data not exist\"}";
+            return u;
     }
     //return toJson(databaseName, tableName， u, length);
-    return "{error:\"unexcept exception\"}";
+    return u;
 }
 bool RecordModel::deleteRecord(string tableName, ushort PageNo, ushort SlotNo)
 {
     return rm.deleteRecord(tableName, PageNo, SlotNo);
 }
-bool RecordModel::updateRecord(string tableName, string record, ushort PageNo, ushort SlotNo)
+bool RecordModel::updateRecord(string tableName, Record record, ushort PageNo, ushort SlotNo)
 {
     if(!deleteRecord(tableName, PageNo, SlotNo))
         return false;

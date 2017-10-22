@@ -3,6 +3,7 @@
 
 #include "filesystem/bufmanager/BufPageManager.h"
 #include "filesystem/fileio/FileManager.h"
+#include "common/RecordBinary.h"
 #include <fstream>
 #include <iostream>
 #include <string>
