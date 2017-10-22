@@ -4,23 +4,26 @@
 using namespace std;
 int main()
 {
+    
+    RecordModel rml;
+    rml.deleteFile("testdir/test");
     RecordManager *rm = new RecordManager("testdir");
     
-    ushort u[4];
-    u[0] = 1;
-    u[1] = 2;
-    u[2] = 3;   
-    u[3] = 4;
-    rm -> createRecord("test", u, 4);
-    u[3] = 5;
-    rm -> createRecord("test", u, 4);
-    ushort u0[3];
-    u0[0] = 6;
-    u0[1] = 7;
-    rm -> createRecord("test", u0, 3);
+    char u[4];
+    u[0] = 'a';
+    u[1] = 'b';
+    u[2] = 'c';   
+    u[3] = 'd';
+    rm -> createRecord("test", &u[0], 4);
+    u[3] = 'e';
+    rm -> createRecord("test", &u[0], 4);
+    char u0[3];
+    u0[0] = 't';
+    u0[1] = 'e';
+    rm -> createRecord("test", &u0[0], 3);
 
     u0[2] = 8;
-    ushortList r;
+    char* r;
     ushort l;
     r = rm -> searchRecord("test", 1, 1, l);
     cout << "r[3] = " << r[3] << endl;
@@ -30,7 +33,7 @@ int main()
     r = rm -> searchRecord("test", 1, 2, l);
     cout << "r[0] = " << r[0] << endl;
 
-    RecordModel rml;
+   
     rml.createFile("testmodel");
     rml.deleteFile("testmodel");
     return 0;

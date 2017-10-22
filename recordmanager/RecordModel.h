@@ -91,7 +91,7 @@ public:
     }
     bool insertRecord(string tableName, string record)
     {
-        ushortList u;
+        bitList u;
         ushort length = -1;
         // u = getushortList(databaseName, tableName, record, length);
         if(length == -1)
@@ -103,7 +103,7 @@ public:
     {
         if(head)
             PageNo = SlotNo = 1;
-        ushortList u;
+        bitList u;
         ushort length;
         while(true)
         {
