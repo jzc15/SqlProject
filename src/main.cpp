@@ -1,6 +1,7 @@
 #include<iostream>
 #include "RecordManager.h"
 #include "RecordModel.h"
+
 using namespace std;
 int main()
 {
