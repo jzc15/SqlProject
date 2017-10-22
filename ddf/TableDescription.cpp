@@ -1,5 +1,5 @@
 #include "TableDescription.h"
-#include "common/Record.h"
+#include "Record.h"
 #include <assert.h>
 
 TableDescription::TableDescription(const string& databaseName, const string& tableName)

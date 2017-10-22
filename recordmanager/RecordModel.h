@@ -4,7 +4,7 @@
 #include<iostream>
 #include <sys/stat.h>
 #include "RecordManager.h"
-#include "common/Record.h"
+#include "ddf/Record.h"
 using namespace std;
 /*
  *  接口总结

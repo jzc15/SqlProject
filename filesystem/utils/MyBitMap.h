@@ -16,7 +16,7 @@ using namespace std;
 //#define MOD 61
 #define BIAS 5
 
-extern unsigned char h[];
+static unsigned char h[61];
 
 
 class MyBitMap {

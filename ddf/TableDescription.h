@@ -7,7 +7,7 @@
 #include <map>
 #include <json11.hpp>
 #include "ColumnDescription.h"
-#include <common/RecordBinary.h>
+#include "RecordBinary.h"
 
 using namespace std;
 using namespace json11;

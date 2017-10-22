@@ -4,7 +4,7 @@
 #include <vector>
 #include <memory>
 #include <json11.hpp>
-#include "ddf/TableDescription.h"
+#include "TableDescription.h"
 #include "RecordBinary.h"
 
 using namespace std;

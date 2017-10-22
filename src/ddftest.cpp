@@ -1,6 +1,6 @@
 #include <ddf/DatabaseDescription.h>
-#include <common/Record.h>
-#include <common/RecordBinary.h>
+#include <ddf/Record.h>
+#include <ddf/RecordBinary.h>
 #include <cstdlib>
 #include <iostream>
 #include <assert.h>
