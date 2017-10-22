@@ -7,6 +7,7 @@
 #include <map>
 #include <json11.hpp>
 #include "ColumnDescription.h"
+#include <common/RecordBinary.h>
 
 using namespace std;
 using namespace json11;
@@ -36,9 +37,15 @@ public:
     // 创建新记录
     shared_ptr<Record> NewRecord();
 
+    // 恢复记录
+    shared_ptr<Record> RecoverRecord(RecordBinary data);
+
     int ColumnIndex(const string& columnName);
 
-    int ColumnSize();
+    int ColumnCount();
+    int FixedColumnCount();
+    int UnfixedColumnCount();
+    size_t FixedDataSize();
 
     ColumnDescription::ptr Column(const string& columnName);
     ColumnDescription::ptr Column(int index);
@@ -46,6 +53,9 @@ public:
     Json Dump();
 
 private:
+    int fixed_column_count;
+    int unfixed_column_count;
+    size_t fixed_data_size;
     map<string, int> columnIndex;
     map<string, ColumnDescription::ptr> columnPtr;
 };

@@ -43,11 +43,28 @@ void TableDescription::Finalize()
         columnIndex[cols[i]->columnName] = i;
         columnPtr[cols[i]->columnName] = cols[i];
     }
+    fixed_column_count = 0;
+    unfixed_column_count = 0;
+    fixed_data_size = 0;
+    for(auto col: cols)
+    {
+        if (col->fixed) fixed_column_count ++;
+        else unfixed_column_count ++;
+
+        if (col->fixed) fixed_data_size += col->size;
+    }
 }
 
 shared_ptr<Record> TableDescription::NewRecord()
 {
     return make_shared<Record>(this);
+}
+
+shared_ptr<Record> TableDescription::RecoverRecord(RecordBinary data)
+{
+    auto ptr = make_shared<Record>(this);
+    ptr->Recover(data);
+    return ptr;
 }
 
 int TableDescription::ColumnIndex(const string& columnName)
@@ -57,9 +74,24 @@ int TableDescription::ColumnIndex(const string& columnName)
     return columnIndex[columnName];
 }
 
-int TableDescription::ColumnSize()
+int TableDescription::ColumnCount()
 {
     return cols.size();
+}
+
+int TableDescription::FixedColumnCount()
+{
+    return fixed_column_count;
+}
+
+int TableDescription::UnfixedColumnCount()
+{
+    return unfixed_column_count;
+}
+
+size_t TableDescription::FixedDataSize()
+{
+    return fixed_data_size;
 }
 
 ColumnDescription::ptr TableDescription::Column(const string& columnName)

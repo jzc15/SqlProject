@@ -17,7 +17,14 @@ using namespace std;
 #define CHAR_TYPE ("char")
 #define VARCHAR_TYPE ("varchar")
 
+enum Type {
+    INT_ENUM = 0,
+    CHAR_ENUM,
+    VARCHAR_ENUM
+};
+
 size_t TypeSize(const string& typeName); // 该类型单个元素的大小
 bool IsTypeFixed(const string& typeName);
+int TypeEnum(const string& typeName);
 
 #endif // _TYPE_INFO_H

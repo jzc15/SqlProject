@@ -37,6 +37,7 @@ void ColumnDescription::normalize()
     std::transform(typeName.begin(), typeName.end(), typeName.begin(), ::tolower);
     fixed = IsTypeFixed(typeName);
     size = TypeSize(typeName)*length;
+    typeEnum = TypeEnum(typeName);
 }
 
 Json ColumnDescription::Dump()

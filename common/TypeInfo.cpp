@@ -14,6 +14,11 @@ static map<string, bool> typeFixed = {
     {CHAR_TYPE, true},
     {VARCHAR_TYPE, false},
 };
+static map<string, int> typeEnum = {
+    {INT_TYPE, INT_ENUM},
+    {CHAR_TYPE, CHAR_ENUM},
+    {VARCHAR_TYPE, VARCHAR_ENUM},
+};
 
 size_t TypeSize(const string& typeName)
 {
@@ -25,4 +30,10 @@ bool IsTypeFixed(const string& typeName)
 {
     assert(typeFixed.find(typeName) != typeFixed.end());
     return typeFixed[typeName];
+}
+
+int TypeEnum(const string& typeName)
+{
+    assert(typeEnum.find(typeName) != typeEnum.end());
+    return typeEnum[typeName];
 }
