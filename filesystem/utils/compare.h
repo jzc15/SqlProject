@@ -29,7 +29,9 @@ using namespace std;
 #define RANGE 1
 #define ISNULL 2
 #define NOTHING 3
-int tmp = 0;
+
+extern int tmp;
+
 template<class Key>
 int keyu(uchar* a, uchar* b) {
 	Key c, d;
