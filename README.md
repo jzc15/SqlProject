@@ -2,6 +2,20 @@
 
 ## 20171021 jzc
 
+### 模块说明
+
+* `common` : 公工模块，定义配置/类型信息
+
+* `ddf` : 数据库/数据表描诉文件，实现了数据库/表/记录的描述类，实现了记录序列化/反序列化等接口，已测试
+
+* `filesystem` : SB页式文件系统（头文件定义变量，贼傻逼）
+
+* `frontend` : 前段模块，负责解析命令
+
+* `json11` : 外部引用json模块
+
+* `recordmanager` : 在页式文件系统之上的记录管理系统
+
 ### RecordManager.h
 
 ####  接口总结
@@ -71,16 +85,3 @@
  *  updateRecord(string tableName, string record， ushort PageNo, ushort SlotNo)
         
         根据PageNo和SlotNo，将此数据更新为record
- 
-####  待实现接口
- *  getushortList(databaseName, tableName, record, length); 
-       
-        根据数据库名，数据表名，记录字符串，返回unsigned short 数组及其长度
-
- *  check(databaseName, tableName, u, length, key, value)
-        
-        根据数据库名，数据表名，unsigned short 数组， key, value, 检查是否符合
-
- *  toJson(u, length);
-
-        根据数据库名，数据表名，unsigned short 数组， 返回json字符串
