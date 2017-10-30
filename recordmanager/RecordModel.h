@@ -53,7 +53,7 @@ public:
     bool closeFile(int fileID);
     bool closeFile(string filename);
     bool insertRecord(string tableName, Record record);
-    RecordBinary searchRecord(string tableName, string key, string, bool head, ushort& PageNo, ushort& SlotNo);
+    RecordBinary searchRecord(string tableName, string key, string value, bool head, ushort& PageNo, ushort& SlotNo);
     bool deleteRecord(string tableName, ushort PageNo, ushort SlotNo);
     bool updateRecord(string tableName, Record record, ushort PageNo, ushort SlotNo);
 };

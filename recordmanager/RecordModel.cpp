@@ -48,27 +48,30 @@ bool RecordModel::closeFile(string filename)
 }
 bool RecordModel::insertRecord(string tableName, Record record)
 {
-    bitList u;
-    ushort length = -1;
-    // u = getushortList(databaseName, tableName, record, length);
-    if(length == -1)
+    RecordBinary u = record.Generate();
+    if(u.size == 0)
         return false;
-    rm.createRecord(tableName, u, length);
+    rm.createRecord(tableName, u);
     return true;
 }
-RecordBinary RecordModel::searchRecord(string tableName, string key, string, bool head, ushort& PageNo, ushort& SlotNo)
+RecordBinary RecordModel::searchRecord(string tableName, string key, string value, bool head, ushort& PageNo, ushort& SlotNo)
 {
     if(head)
         PageNo = SlotNo = 1;
     RecordBinary u;
+    TableDescription td(databaseName, tableName);
+    Record record(&td);
     while(true)
     {
         u = rm.searchRecord(tableName, PageNo, SlotNo);
-        //if(check(databaseName, tableName, u, length, key, value)) break;
-        if(!rm.nextRecord(tableName, PageNo, SlotNo))
+        record.Recover(u);
+        string s = record.GetString(key);
+        if(value.compare(s) == 0)
             return u;
+        if(!rm.nextRecord(tableName, PageNo, SlotNo))
+            break;
     }
-    //return toJson(databaseName, tableName， u, length);
+    u.size = 0;
     return u;
 }
 bool RecordModel::deleteRecord(string tableName, ushort PageNo, ushort SlotNo)
