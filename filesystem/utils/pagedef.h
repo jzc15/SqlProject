@@ -58,7 +58,7 @@ extern int tt;
 
 typedef unsigned short* ushortList;
 typedef unsigned short BufLength;
-typedef char* bitList;
+typedef unsigned char* bitList;
 #define BufLengthSize 2
 
 #endif

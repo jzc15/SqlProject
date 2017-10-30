@@ -11,7 +11,7 @@ RecordManager::RecordManager(string databaseName)
     mkdir(databaseName.c_str() ,0755);
 }
 
-bool RecordManager::createRecord(string tableName, bitList buf, BufLength length)
+bool RecordManager::createRecord(string tableName, bitList buf, ushort length)
 {
     FileManager f;
     string filepath = databaseName + "/" + tableName;
@@ -79,10 +79,15 @@ bool RecordManager::createRecord(string tableName, bitList buf, BufLength length
     f.closeFile(fileID);
     return true;
 }
-
-bitList RecordManager::searchRecord(string tableName, ushort PageNo, ushort SlotNo, ushort &length)
+bool RecordManager::createRecord(string tableName, RecordBinary rb)
+{
+    return createRecord(tableName, rb.ptr, (rb.size));
+}
+RecordBinary RecordManager::searchRecord(string tableName, ushort PageNo, ushort SlotNo)
 {
     FileManager f;
+    RecordBinary u;
+    u.size = 0;
     string filepath = databaseName + "/" + tableName;
     int fileID;
     f.createFile(filepath.c_str());
@@ -96,9 +101,10 @@ bitList RecordManager::searchRecord(string tableName, ushort PageNo, ushort Slot
     bpm.access(index);
     ushortList t = (ushortList) b0;
     
-    if(b0[0] < PageNo || PageNo <= 0)
-        return NULL;
-    
+    if(b0[0] < PageNo || PageNo <=  0)
+        return u;
+    //cout << "PageNo = " << PageNo << endl;
+    //cout << "SlotNo = " << SlotNo << endl;
     /*
      * 获取第i页，判断SlotNo是否合法，查询数据
      */
@@ -107,17 +113,18 @@ bitList RecordManager::searchRecord(string tableName, ushort PageNo, ushort Slot
     ushortList ti = (ushortList) bi;
     bitList b = (bitList) bi;
     if(ti[0] < SlotNo || PageNo <= 0)
-        return NULL;
-    
-    length = ti[SlotNo*2];
-    ushort startPos = ti[SlotNo*2+1];
-    bitList u = new char[length];           // FIXME
+        return u;
 
+    ushort length = ti[SlotNo*2];
+    ushort startPos = ti[SlotNo*2+1];
+    
+    u.size = length;
     for(ushort i = 0; i < length; i++)
-        u[i] = b[startPos+i];
+        u.ptr[i] = b[startPos+i];
+    
     bpm.close();
     f.closeFile(fileID);
-    return &u[0];
+    return u;
 }
 
 bool RecordManager::deleteRecord(string tableName, ushort PageNo, ushort SlotNo)
@@ -137,7 +144,7 @@ bool RecordManager::deleteRecord(string tableName, ushort PageNo, ushort SlotNo)
     ushortList t = (ushortList) b0;
     
     if(b0[0] < PageNo || PageNo <= 0)
-        return NULL;
+        return false;
     
     /*
      * 获取第i页，判断SlotNo是否合法，查询数据
@@ -148,7 +155,7 @@ bool RecordManager::deleteRecord(string tableName, ushort PageNo, ushort SlotNo)
     bitList b = (bitList) bi;
 
     if(ti[0] < SlotNo || PageNo <= 0)
-        return NULL;
+        return false;
     
     ushort length = ti[SlotNo*2];
     ushort startPos = ti[SlotNo*2+1];
@@ -163,8 +170,8 @@ bool RecordManager::deleteRecord(string tableName, ushort PageNo, ushort SlotNo)
         ti[i*2] = ti[i*2+2];
         ti[i*2+1] = ti[i*2+3] + length;
     }
-    cout << "ti[5] = " << ti[5] << endl;
-    cout << "SlotNo = " << SlotNo << endl;
+    //cout << "ti[5] = " << ti[5] << endl;
+    //cout << "SlotNo = " << SlotNo << endl;
     bpm.close();
     f.closeFile(fileID);
     return true;
@@ -187,7 +194,7 @@ bool RecordManager::nextRecord(string tableName, ushort& PageNo, ushort& SlotNo)
     ushortList t = (ushortList) b0;
     
     if(b0[0] < PageNo || PageNo <= 0)
-        return NULL;
+        return false;
     
     /*
      * 获取第i页，判断SlotNo是否合法，查询数据
@@ -197,7 +204,7 @@ bool RecordManager::nextRecord(string tableName, ushort& PageNo, ushort& SlotNo)
     ushortList ti = (ushortList) bi;
     
     if(ti[0] < SlotNo || PageNo <= 0)
-        return NULL;
+        return false;
     
     while(true)
     {

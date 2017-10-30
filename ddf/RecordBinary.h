@@ -7,7 +7,7 @@
 struct RecordBinary
 {
     uchar* ptr;
-    size_t size;
+    ushort size;
 };
 
 #endif // _RECORD_BINARY_H

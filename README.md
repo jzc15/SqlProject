@@ -9,7 +9,7 @@
        
         构造一个数据库，创建数据库文件夹
 
- *  createRecord(string tableName, ushortList buf, BufLength length)  
+ *  createRecord(string tableName, bitList buf, BufLength length)  
        
         添加数据，如果数据表不存在则创建数据表，返回值表示是否添加成功
 
@@ -54,7 +54,7 @@
        
         根据文件名关闭文件
 
- *  insertRecord(string tableName, string record)
+ *  insertRecord(string tableName, Record record)
        
         根据表名和json记录插入数据
 
@@ -62,25 +62,12 @@
         
         根据表名和key,value查询一条数据,head表示是否从头开始查找，如果不是那么需要给定PageNo和SlotNo;
         从（PageNo，SlotNo）开始查找，作为第一个check的项;
-        返回json数据，数据堆RID （PageNo，SlotNo）
+        返回Record，数据堆RID （PageNo，SlotNo）
 
  *  deleteRecord(string tableName, ushort PageNo, ushort SlotNo)
         
         根据PageNo和SlotNo删除指定数据
 
- *  updateRecord(string tableName, string record， ushort PageNo, ushort SlotNo)
+ *  updateRecord(string tableName, Record record， ushort PageNo, ushort SlotNo)
         
         根据PageNo和SlotNo，将此数据更新为record
- 
-####  待实现接口
- *  getushortList(databaseName, tableName, record, length); 
-       
-        根据数据库名，数据表名，记录字符串，返回unsigned short 数组及其长度
-
- *  check(databaseName, tableName, u, length, key, value)
-        
-        根据数据库名，数据表名，unsigned short 数组， key, value, 检查是否符合
-
- *  toJson(u, length);
-
-        根据数据库名，数据表名，unsigned short 数组， 返回json字符串

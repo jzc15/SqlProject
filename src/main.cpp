@@ -6,33 +6,33 @@ using namespace std;
 int main()
 {
     
-    RecordModel rml;
-    rml.deleteFile("testdir/test");
+    RecordModel rml("testdir");
+    cout << rml.deleteFile("test") << endl;
     RecordManager *rm = new RecordManager("testdir");
     
-    char u[4];
+    uchar u[4];
     u[0] = 'a';
     u[1] = 'b';
     u[2] = 'c';   
     u[3] = 'd';
     rm -> createRecord("test", &u[0], 4);
-    u[3] = 'e';
+    u[2] = 'e';
     rm -> createRecord("test", &u[0], 4);
-    char u0[3];
+    uchar u0[3];
     u0[0] = 't';
     u0[1] = 'e';
+    u0[2] = 't';
     rm -> createRecord("test", &u0[0], 3);
 
     u0[2] = 8;
-    char* r;
-    ushort l;
-    r = rm -> searchRecord("test", 1, 1, l);
-    cout << "r[3] = " << r[3] << endl;
-    r = rm -> searchRecord("test", 1, 2, l);
-    cout << "r[3] = " << r[3] << endl;
+    RecordBinary r;
+    r = rm -> searchRecord("test", 1, 1);
+    cout << "r[3] = " << r.ptr[3] << endl;
+    r = rm -> searchRecord("test", 1, 2);
+    cout << "r[2] = " << r.ptr[2] << endl;
     rm -> deleteRecord("test", 1, 2);
-    r = rm -> searchRecord("test", 1, 2, l);
-    cout << "r[0] = " << r[0] << endl;
+    r = rm -> searchRecord("test", 1, 2);
+    cout << "r[0] = " << r.ptr[0] << endl;
 
    
     rml.createFile("testmodel");

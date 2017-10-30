@@ -2,7 +2,7 @@
 
 RecordModel::RecordModel()
 {
-    
+    databaseName = "";
 }
 RecordModel::RecordModel(string databaseName)
 {
@@ -20,9 +20,11 @@ bool RecordModel::deleteFile(string filename)
 {
     filename = databaseName + "/" + filename;
     int fileID;
+    //cout << "fileID = " << fileID << endl;
+    //cout << "filename = " << filename << endl;
     fm.openFile(filename.c_str(), fileID);
     fm.closeFile(fileID); 
-    if(remove(filename.c_str()))
+    if(remove(filename.c_str()) == 0)
         return true;
     return false;
 }
@@ -54,15 +56,14 @@ bool RecordModel::insertRecord(string tableName, Record record)
     rm.createRecord(tableName, u, length);
     return true;
 }
-bitList RecordModel::searchRecord(string tableName, string key, string, bool head, ushort& PageNo, ushort& SlotNo)
+RecordBinary RecordModel::searchRecord(string tableName, string key, string, bool head, ushort& PageNo, ushort& SlotNo)
 {
     if(head)
         PageNo = SlotNo = 1;
-    bitList u;
-    ushort length;
+    RecordBinary u;
     while(true)
     {
-        u = rm.searchRecord(tableName, PageNo, SlotNo, length);
+        u = rm.searchRecord(tableName, PageNo, SlotNo);
         //if(check(databaseName, tableName, u, length, key, value)) break;
         if(!rm.nextRecord(tableName, PageNo, SlotNo))
             return u;
