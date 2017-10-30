@@ -1,5 +1,5 @@
 #include "Record.h"
-#include "TypeInfo.h"
+#include "common/TypeInfo.h"
 #include <memory>
 #include <cstring>
 #include <assert.h>

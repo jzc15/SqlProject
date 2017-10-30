@@ -2,10 +2,14 @@ project(sql_project)
 cmake_minimum_required(VERSION 2.8.0)
 
 add_subdirectory(json11)
+find_package(FLEX)
+find_package(BISON)
 
+# 编译选项
 add_compile_options(--std=c++11 -g)
 
-set(MODULES filesystem recordmanager ddf common)
+# 模块
+set(MODULES filesystem recordmanager ddf common frontend)
 set(NOEMPTY_MODULES "")
 foreach(M ${MODULES})
     file(GLOB_RECURSE SOURCES ${M}/*.cpp)
@@ -18,7 +22,10 @@ foreach(M ${MODULES})
     endif()
 endforeach()
 
-message(STATUS NOEMPTY_MODULES ${NOEMPTY_MODULES})
+# flex&yacc
+BISON_TARGET(Parser frontend/parse.y ${CMAKE_CURRENT_BINARY_DIR}/frontend_parse.cc COMPILE_FLAGS --defines=${CMAKE_CURRENT_BINARY_DIR}/frontend_parse.h)
+FLEX_TARGET(Lexer frontend/scan.l ${CMAKE_CURRENT_BINARY_DIR}/frontend_lex.cc COMPILE_FLAGS -i)
+target_sources(frontend PUBLIC ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})
 
 file(GLOB TARGETS_CPP src/*.cpp)
 

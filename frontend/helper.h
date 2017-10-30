@@ -1,0 +1,14 @@
+#ifndef _PARSE_H
+#define _PARSE_H
+
+#include <cstdio>
+
+// need by yacc
+void yyerror(const char* s);
+int yylex(void); // defined in frontend_lex.cc(scan.l)
+int yyparse(void); // defined in frontend_parse.cc(parse.y)
+
+void parseFile(const char* filename);
+void parseFile(FILE *fd = stdin);
+
+#endif // _PARSE_H
