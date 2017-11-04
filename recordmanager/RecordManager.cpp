@@ -228,3 +228,22 @@ bool RecordManager::nextRecord(string tableName, ushort& PageNo, ushort& SlotNo)
     f.closeFile(fileID);
     return false;
 }
+
+ushort RecordManager::getPageCnt(string tableName)
+{
+    FileManager f;
+    RecordBinary u;
+    u.size = 0;
+    string filepath = databaseName + "/" + tableName;
+    int fileID;
+    f.createFile(filepath.c_str());
+    f.openFile(filepath.c_str(), fileID);
+    BufPageManager bpm(&f);
+    int index;
+    /*
+     * 获取第0页，返回总页数
+     */
+    BufType b0 = bpm.getPage(fileID, 0, index);
+    bpm.access(index);
+    return b0[0];
+}
