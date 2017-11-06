@@ -316,22 +316,21 @@ void Bplus_tree::insert(RecordBinary &a, uint rid, bool merge)
     return;
 }
 
-uint Bplus_tree::getRid(ushort PageNo, ushort SlotNo)
+uint Bplus_tree::getRid(ushort pn, ushort sn)
 {
-    uint pn = PageNo;
-    uint sn = SlotNo;
-    return (pn<<16)+sn;
+    uint pni = pn;
+    uint sni = sn;
+    return (pni<<16)+sni;
 }
-void Bplus_tree::getPnSn(uint rid, ushort &PageNo, ushort &SlotNo)
+void Bplus_tree::getPnSn(uint rid, ushort &pn, ushort &sn)
 {
-    PageNo = rid >> 16;
-    SlotNo = rid % 65536;
+    pn = rid >> 16;
+    sn = rid % 65536;
     return ;
 }
-uint Bplus_tree::search(RecordBinary &a)
+uint Bplus_tree::search(RecordBinary &a, ushort &pn, int &z)
 {
     int k = 1 << 8;
-    int z = 0;
     //倍增查找
     while(k > 0)
     {
@@ -352,7 +351,12 @@ uint Bplus_tree::search(RecordBinary &a)
     }
    return btree.search(a);
 }
-
+uint Bplus_tree::search(RecordBinary &a)
+{
+    ushort pn;
+    int z = 0;
+    return search(a, pn, z);
+}
 void Bplus_tree::remove(RecordBinary &a)
 {
     int k = 1 << 8;
