@@ -34,7 +34,7 @@ int main()
     r = rm -> searchRecord("test", 1, 2);
     cout << "r[0] = " << r.ptr[0] << endl;
 
-   
+    
     rml.createFile("testmodel");
     rml.deleteFile("testmodel");
     return 0;

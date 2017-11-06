@@ -14,11 +14,13 @@ using namespace std;
  */
 class Bplus_tree
 {
-    uint N = 100;
+    uint N = 4;
     uchar type; //0: 可以直接使用字典比较，1：int比较，2：float比较
     
     uint PageNo;
     uint parent;
+    uint left;
+    uint right;
     string databaseName;
     string tableName;
 
@@ -31,9 +33,12 @@ public:
     void save();
     void load();
     void print();
+    uint getRid(ushort PageNo, ushort SlotNo);
+    void getPnSn(uint rid, ushort &PageNo, ushort &SlotNo);
     bool compare(RecordBinary &A, RecordBinary &B);
     void insert(RecordBinary &a, uint rid, bool merge);
-    //void find(RecordBinary &a, uint& rid);
+    uint search(RecordBinary &a);
+    void remove(RecordBinary &a);
     ~Bplus_tree();
 };
 

@@ -37,6 +37,7 @@ public:
     RecordBinary searchRecord(string tableName, ushort PageNo, ushort SlotNo);
     bool deleteRecord(string tableName, ushort PageNo, ushort SlotNo);
     bool nextRecord(string tableName, ushort& PageNo, ushort& SlotNo);
+    bool saveRecord(string tableName, RecordBinary rb,  ushort PageNo, ushort SlotNo);
     ushort getPageCnt(string tableName);
 };
 

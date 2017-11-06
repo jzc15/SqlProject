@@ -101,7 +101,8 @@ RecordBinary RecordManager::searchRecord(string tableName, ushort PageNo, ushort
     bpm.access(index);
     ushortList t = (ushortList) b0;
     
-    if(b0[0] < PageNo || PageNo <=  0)
+    
+    if(t[0] < PageNo || PageNo <=  0)
         return u;
     //cout << "PageNo = " << PageNo << endl;
     //cout << "SlotNo = " << SlotNo << endl;
@@ -118,10 +119,16 @@ RecordBinary RecordManager::searchRecord(string tableName, ushort PageNo, ushort
     ushort length = ti[SlotNo*2];
     ushort startPos = ti[SlotNo*2+1];
     
+    u.ptr = new uchar[length];
     u.size = length;
     for(ushort i = 0; i < length; i++)
         u.ptr[i] = b[startPos+i];
     
+    // cout << "length = " << length << endl;
+    // cout << "startPos = " << startPos << endl;
+    // for(ushort i = 12; i < 50; i++)
+    //     cout << (int)u.ptr[i];
+    // cout << endl;
     bpm.close();
     f.closeFile(fileID);
     return u;
@@ -143,7 +150,7 @@ bool RecordManager::deleteRecord(string tableName, ushort PageNo, ushort SlotNo)
     bpm.markDirty(index);
     ushortList t = (ushortList) b0;
     
-    if(b0[0] < PageNo || PageNo <= 0)
+    if(t[0] < PageNo || PageNo <= 0)
         return false;
     
     /*
@@ -159,7 +166,6 @@ bool RecordManager::deleteRecord(string tableName, ushort PageNo, ushort SlotNo)
     
     ushort length = ti[SlotNo*2];
     ushort startPos = ti[SlotNo*2+1];
-
     t[PageNo] -= (length * 2 + 4);    // 维护首页
     ti[0] --;
     ti[1] += length;
@@ -246,4 +252,52 @@ ushort RecordManager::getPageCnt(string tableName)
     BufType b0 = bpm.getPage(fileID, 0, index);
     bpm.access(index);
     return b0[0];
+}
+
+bool RecordManager::saveRecord(string tableName, RecordBinary rb,  ushort PageNo, ushort SlotNo)
+{
+    
+    FileManager f;
+    string filepath = databaseName + "/" + tableName;
+    int fileID;
+    f.createFile(filepath.c_str());
+    f.openFile(filepath.c_str(), fileID);
+    BufPageManager bpm(&f);
+    int index;
+    /*
+     * 获取第0页，检查PageNo是否合法
+     */
+    BufType b0 = bpm.getPage(fileID, 0, index);
+    bpm.access(index);
+    ushortList t = (ushortList) b0;
+    //cout << "t[0] = " << t[0] << endl;
+    //cout << "PageNo = " << PageNo << endl;
+    if(t[0] < PageNo || PageNo <= 0)
+        return createRecord(tableName, rb);
+
+    BufType bi = bpm.getPage(fileID, PageNo, index);
+    bpm.markDirty(index);
+    ushortList ti = (ushortList) bi;
+    bitList b = (bitList) bi;
+    if(ti[0] < SlotNo || PageNo <= 0)
+        return createRecord(tableName, rb);
+
+    ushort length = ti[SlotNo*2];
+    ushort startPos = ti[SlotNo*2+1];
+    
+    if(length != rb.size)
+        return false;
+
+    for(ushort i = 0; i < length; i++)
+        b[startPos+i] = rb.ptr[i];
+    
+    // cout << "length = " << length << endl;
+    // cout << "startPos = " << startPos << endl;
+    // for(ushort i = 12; i < 50; i++)
+    //     cout << (int)b[startPos+i];
+    // cout << endl;
+    bpm.close();
+    f.closeFile(fileID);
+    return true;
+
 }
