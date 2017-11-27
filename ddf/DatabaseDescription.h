@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <memory>
+#include <vector>
 
 #include "TableDescription.h"
 
@@ -26,6 +27,8 @@ public:
     TableDescription::ptr DropTable(const string& tableName);
     // 查找表
     TableDescription::ptr SearchTable(const string& tableName);
+    // 表列表
+    vector<string> TableList();
 
     void Save();
 

@@ -2,6 +2,16 @@
 
 ## 20171021 jzc
 
+### 运行test.sql
+
+```sh
+> mkdir build
+> cd build
+> cmake ..
+> make
+> ./main
+```
+
 ### 模块说明
 
 * `common` : 公工模块，定义配置/类型信息

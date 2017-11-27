@@ -8,20 +8,30 @@ using namespace std;
 
 extern FILE* yyin;
 
+Program* pro = NULL;
+
 void yyerror(const char* s)
 {
     puts(s);
 }
 
-void parseFile(const char* filename)
+Program* parseFile(const char* filename)
 {
     yyin = fopen(filename, "r");
     assert(yyin);
     yyparse();
+
+    Program* t = pro;
+    pro = NULL;
+    return t;
 }
 
-void parseFile(FILE *fd)
+Program* parseFile(FILE *fd)
 {
     yyin = fd;
     yyparse();
+
+    Program* t = pro;
+    pro = NULL;
+    return t;
 }

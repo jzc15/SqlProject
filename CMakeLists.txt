@@ -9,7 +9,7 @@ find_package(BISON)
 add_compile_options(--std=c++11 -g)
 
 # 模块
-set(MODULES filesystem recordmanager ddf common frontend Bplustree)
+set(MODULES filesystem recordmanager ddf common Bplustree frontend)
 set(NOEMPTY_MODULES "")
 foreach(M ${MODULES})
     file(GLOB_RECURSE SOURCES ${M}/*.cpp)

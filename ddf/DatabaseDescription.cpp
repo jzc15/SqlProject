@@ -56,6 +56,16 @@ TableDescription::ptr DatabaseDescription::SearchTable(const string& tableName)
     return tables[tableName];
 }
 
+vector<string> DatabaseDescription::TableList()
+{
+    vector<string> rst;
+    for(auto it = tables.begin(); it != tables.end(); it ++)
+    {
+        rst.push_back(it->first);
+    }
+    return rst;
+}
+
 void DatabaseDescription::Save()
 {
     mkdir(databaseName.c_str(), 0775);
