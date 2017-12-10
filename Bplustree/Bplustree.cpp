@@ -368,10 +368,54 @@ void Bplus_tree::remove(RecordBinary &a)
             z += k;
         k >>= 1;
     }
-    if(leaf)
+    if(leaf)                      //如果删除了最小值，由于非叶节点只作为分界点存在，因此无需维护父节点
     {
         for(int i = z+1; i < key_cnt; i++)
             key[i-1] = key[i], son[i-1] = son[i];
+        key_cnt--;
+        
+        if(key_cnt < N/2)
+        {
+            Bplus_tree btree(databaseName, tableName, type, parent, PageNo);
+            btree.load();
+            bool hleft, hright;
+        
+            hleft = (!compare(btree.key[0], a)) && left != 1;        
+            hright = (!compara(a, btree.key[key_cnt-1])) && right != 1;
+
+            Bplus_tree bleft(databaseName, tableName, type, left, PageNo);   
+            Bplus_tree bright(databaseName, tableName, type, right, PageNo);   
+
+            if(hleft)
+            {
+                bleft.load();
+                if(bleft.key_cnt > N/2)
+                {
+
+                    return ;
+                }
+            }
+
+            if(hright)
+            {
+                bright.load();
+                if(bright.key_cnt > N/2)
+                {
+                    
+                    return ;
+                }
+            }
+
+            if(hleft)
+            {
+                return ;
+            }
+
+            if(hright)
+            {
+                return ;
+            }
+        }
         return ;
     }
     Bplus_tree btree(databaseName, tableName, type, son[z], PageNo);
