@@ -144,6 +144,21 @@ bool Bplus_tree::compare(RecordBinary &A, RecordBinary &B)
 
     return A < B;
 }
+
+
+int Bplus_tree::search_key(RecordBinary &a)
+{
+    int k = 1 << 8;
+    int z = 0;
+    //倍增查找
+    while(k > 0)
+    {
+        if( k+z < key_cnt && (!compare(a, key[z+k])))         // >=
+            z += k;
+        k >>= 1;
+    }
+    return z;
+}
 void Bplus_tree::insert(RecordBinary &a, uint rid, bool merge)
 {
     if (leaf == true || merge == true)
@@ -203,6 +218,10 @@ void Bplus_tree::insert(RecordBinary &a, uint rid, bool merge)
             s2.left = PageNo;
             s2.right = right;
             right = totalPage+1;
+            Bplus_tree s3(databaseName, tableName, type, s2.right, parent);
+            s3.load();
+            s3.left = totalPage+1;
+            s3.save();
         }
         s1.key_cnt = N/2;
         key_cnt = N/2;
@@ -294,15 +313,7 @@ void Bplus_tree::insert(RecordBinary &a, uint rid, bool merge)
     }
     b.insert(a, rid, 0);
     */
-    int k = 1 << 8;
-    int z = 0;
-    //倍增查找
-    while(k > 0)
-    {
-        if( k+z < key_cnt && (!compare(a, key[z+k])))
-            z += k;
-        k >>= 1;
-    }
+    int z = search_key(a);
     Bplus_tree btree(databaseName, tableName, type, son[z], PageNo);
     btree.load();
 
@@ -330,14 +341,7 @@ void Bplus_tree::getPnSn(uint rid, ushort &pn, ushort &sn)
 }
 uint Bplus_tree::search(RecordBinary &a, ushort &pn, int &z)
 {
-    int k = 1 << 8;
-    //倍增查找
-    while(k > 0)
-    {
-        if( k+z < key_cnt && (!compare(a, key[z+k])))
-            z += k;
-        k >>= 1;
-    }
+    z = search_key(a);
     if(leaf)
         return son[z];
     Bplus_tree btree(databaseName, tableName, type, son[z], PageNo);
@@ -357,7 +361,7 @@ uint Bplus_tree::search(RecordBinary &a)
     int z = 0;
     return search(a, pn, z);
 }
-void Bplus_tree::remove(RecordBinary &a)
+void Bplus_tree::remove(RecordBinary &a, bool del)
 {
     int k = 1 << 8;
     int z = 0;
@@ -368,54 +372,114 @@ void Bplus_tree::remove(RecordBinary &a)
             z += k;
         k >>= 1;
     }
-    if(leaf)                      //如果删除了最小值，由于非叶节点只作为分界点存在，因此无需维护父节点
+    if(leaf || del)                      //如果删除了最小值，由于非叶节点只作为分界点存在，因此无需维护父节点
     {
         for(int i = z+1; i < key_cnt; i++)
             key[i-1] = key[i], son[i-1] = son[i];
         key_cnt--;
         
-        if(key_cnt < N/2)
+        if(key_cnt < N/2 && PageNo != 1)
         {
-            Bplus_tree btree(databaseName, tableName, type, parent, PageNo);
+            
+            Bplus_tree btree(databaseName, tableName, type, parent, -1);
             btree.load();
             bool hleft, hright;
         
-            hleft = (!compare(btree.key[0], a)) && left != 1;        
-            hright = (!compara(a, btree.key[key_cnt-1])) && right != 1;
+            hleft = btree.key_cnt > 1 && (!compare(a, btree.key[1]));        
 
-            Bplus_tree bleft(databaseName, tableName, type, left, PageNo);   
-            Bplus_tree bright(databaseName, tableName, type, right, PageNo);   
-
+            Bplus_tree bleft(databaseName, tableName, type, left, parent);   
+            bleft.load();
             if(hleft)
             {
-                bleft.load();
                 if(bleft.key_cnt > N/2)
                 {
+                    bleft.key_cnt--;
+                    int z = btree.search_key(key[0]);
+                    for(int i = key_cnt; i > 0; i--)
+                        key[i] = key[i-1], son[i] = son[i-1];
+                    key_cnt++;
+                    key[0] = bleft.key[bleft.key_cnt], son[0] = bleft.son[bleft.key_cnt];
+                   
+                    btree.key[z] = key[0];
 
+                    save();
+                    btree.save();
+                    bleft.save();
                     return ;
                 }
             }
 
+            hright = btree.key_cnt > 1 && (compare(a, btree.key[key_cnt-1]));
+            Bplus_tree bright(databaseName, tableName, type, right, parent);   
+            bright.load();
             if(hright)
             {
-                bright.load();
                 if(bright.key_cnt > N/2)
                 {
-                    
+                    bright.key_cnt--;
+                    int z = btree.search_key(bright.key[0]);
+                    key[key_cnt] = bright.key[0], son[key_cnt] = bright.son[0];
+                    key_cnt++;
+                    for(int i = 0; i < bright.key_cnt; i++)
+                        bright.key[i] = bright.key[i+1], bright.son[i] = bright.son[i+1];
+                    btree.key[z] = bright.key[0];
+                    save();
+                    btree.save();
+                    bright.save();
                     return ;
                 }
             }
 
             if(hleft)
             {
+                for(int i = 0; i < key_cnt; i++)
+                {
+                    bleft.key[bleft.key_cnt] = key[i], bleft.son[bleft.key_cnt] = son[i];
+                    bleft.key_cnt++;
+                }
+                bleft.right = right;
+                bright.left = left;
+                int z = btree.search_key(key[0]);
+                //save();
+                bleft.save();
+                bright.save();
+
+                if(parent == 1)
+                    btree.load();
+                
+                btree.remove(btree.key[z], 1);
                 return ;
             }
 
             if(hright)
             {
+                for(int i = 0; i < bright.key_cnt; i++)
+                {
+                    key[key_cnt] = bright.key[i], son[key_cnt] = bright.son[i];
+                    key_cnt++;
+                }
+                bleft.right = right;
+                bright.left = left;
+                int z = btree.search_key(bright.key[0]);
+                for(int i = 0; i < key_cnt; i++)
+                    bright.key[i] = key[i], bright.son[i] = son[i];
+                bright.key_cnt = key_cnt;
+                //save();
+                bleft.save();
+                bright.save();
+                if(parent == 1)
+                    btree.load();
+                btree.remove(btree.key[z], 1);
                 return ;
             }
+            //只可能发生在根节点，替换掉根节点
+            PageNo = 1;
+            left = 1;
+            right = 1;
+            leaf = 1;
+            save();
         }
+        save();
         return ;
     }
     Bplus_tree btree(databaseName, tableName, type, son[z], PageNo);
@@ -427,5 +491,16 @@ void Bplus_tree::remove(RecordBinary &a)
         btree.parent = PageNo;
         btree.save();
     }
-   return btree.remove(a);
+    btree.remove(a, 0);
+    return ;
+}
+void Bplus_tree::insert(RecordBinary &a, uint rid)
+{
+    insert(a, rid, 0);
+    return ;
+}
+void Bplus_tree::remove(RecordBinary &a)
+{
+    remove(a, 0);
+    return ;
 }

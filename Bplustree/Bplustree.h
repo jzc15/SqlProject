@@ -23,14 +23,20 @@ using namespace std;
  *      将rid还原PageNo和SlotNo
  *  compare(RecordBinary &A, RecordBinary &B)
  *      根据type，实现比较
+ *  search_key(RecordBinary &a)
+ *      倍增查找a位于哪一个区间
  *  insert(RecordBinary &a, uint rid, bool merge)
  *      插入数据（a, rid)，merge表示是否在上溢，插入时将merge置为0
  *  search(RecordBinary &a)
  *      查询数据a，返回rid，未找到返回不超过它的最大值，如果还不存在则返回最小值
  *  search(RecordBinary &a， ushort &pn, int &z)
  *      查询数据a，返回rid，所在树的位置pn和z，未找到返回不超过它的最大值，如果还不存在则返回最小值
+ *  remove(RecordBinary &a, bool del)
+ *      删除查询数据a，未找到则不做任何操作，删除时置del为0
+ *  insert(RecordBinary &a, uint rid)
+ *      插入数据（a, rid)
  *  remove(RecordBinary &a)
- *      删除查询数据a，未找到则不做任何操作
+ *      删除查询数据a
  */
 class Bplus_tree
 {
@@ -56,9 +62,12 @@ public:
     uint getRid(ushort pn, ushort sn);
     void getPnSn(uint rid, ushort &pn, ushort &sn);
     bool compare(RecordBinary &A, RecordBinary &B);
+    int search_key(RecordBinary &a);
     void insert(RecordBinary &a, uint rid, bool merge);
     uint search(RecordBinary &a, ushort &pn, int &z);
     uint search(RecordBinary &a);
+    void remove(RecordBinary &a, bool del);
+    void insert(RecordBinary &a, uint rid);
     void remove(RecordBinary &a);
     ~Bplus_tree();
 };
