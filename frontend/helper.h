@@ -2,7 +2,7 @@
 #define _PARSE_H
 
 #include <cstdio>
-#include "nodes.hpp"
+#include "stmts.hpp"
 #include "program.hpp"
 
 extern Program* pro;
