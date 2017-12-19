@@ -4,8 +4,8 @@
 #include <vector>
 #include <memory>
 #include <json11.hpp>
-#include "TableDescription.h"
-#include "RecordBinary.h"
+#include "tabledesc.h"
+#include "disk/common.h"
 
 using namespace std;
 using namespace json11;
@@ -17,15 +17,15 @@ class Record
 public:
     typedef shared_ptr<Record> ptr;
 
-    TableDescription* td;
+    TableDesc* td;
 
-    Record(TableDescription* td);
+    Record(TableDesc* td);
     ~Record();
 
     // 生成序列化的数据
-    RecordBinary Generate();
+    data_t Generate();
     // 恢复
-    void Recover(RecordBinary data);
+    void Recover(data_t data);
 
     void SetNull(const string& columnName);
     void SetNull(int columnIndex);
@@ -49,6 +49,11 @@ public:
     void SetString(int columnIndex, const char* value);
     string GetString(const string& columnName);
     string GetString(int columnIndex);
+
+    data_t GetValue(const string& columnName);
+    data_t GetValue(int columnIndex);
+
+    void Output();
 
 private:
     vector<Json> values; // 每列的值

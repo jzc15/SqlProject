@@ -2,6 +2,7 @@
 %{
 
 #include <iostream>
+#include <cstdlib>
 #include "stmts.hpp"
 #include "frontend_parse.h"
 
@@ -11,9 +12,9 @@ using namespace std;
 #define SAVE_TOKEN2 yylval.str = new std::string(yytext+1, yyleng-2)
 #define SAVE_INT { string x(yytext, yyleng); yylval.int_value = atoi(x.c_str()); }
 #define TOKEN(t) yylval.token = t
-// #define PRINT(t) { \
-//     printf("[%s] %s\n", std::string(yytext, yyleng).c_str(), #t); \
-// }
+#define PRINT(t) { \
+    printf("[%s] %s\n", std::string(yytext, yyleng).c_str(), #t); \
+}
 
 
 #ifndef PRINT
@@ -30,7 +31,7 @@ WHITESPACE			    ([ \t]+)
 IDENTIFIER              ([A-Za-z][_0-9A-Za-z]*)
 VALUE_INT               ([0-9]+)
 VALUE_STRING           '[^']*'
-SIMPLE_OPERATOR         (";"|"`"|"'"|"("|")"|",")
+SIMPLE_OPERATOR         (";"|"`"|"'"|"("|")"|","|"*"|".")
 
 %%
 
@@ -75,10 +76,10 @@ SIMPLE_OPERATOR         (";"|"`"|"'"|"("|")"|",")
 {NEWLINE}               { /*skip*/                                                      }
 {WHITESPACE}            { /*skip*/                                                      }
 {IDENTIFIER}            { SAVE_TOKEN; PRINT(IDENTIFIER); return IDENTIFIER;             }
-{VALUE_INT}             { SAVE_INT; PRINT(VALUE_INT); return TOKEN(VALUE_INT);          }
-{VALUE_STRING}          { SAVE_TOKEN2; PRINT(VALUE_STRING); return TOKEN(VALUE_STRING); }
+{VALUE_INT}             { SAVE_INT; PRINT(VALUE_INT); return VALUE_INT;                 }
+{VALUE_STRING}          { SAVE_TOKEN2; PRINT(VALUE_STRING); return VALUE_STRING;        }
 {SIMPLE_OPERATOR}       { return yytext[0];                                             }
 
-.                       { printf("Unknown token [%c] at line %d!\n", yytext[0], yylineno + 1); yyterminate(); }
+.                       { printf("Unknown token [%c] at line %d!\n", yytext[0], yylineno); yyterminate(); exit(1); }
 
 %%

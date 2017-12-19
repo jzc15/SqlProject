@@ -7,10 +7,12 @@
 #include <cstdlib>
 #include <cassert>
 
-#include "const.hpp"
 #include "context.hpp"
-
-#include <ddf/DatabaseDescription.h>
+#include <disk/common.h>
+#include <recordmanager/slotsfile.h>
+#include <ddf/dbdesc.h>
+#include <ddf/record.h>
+#include <ddf/typeinfo.h>
 
 using namespace std;
 

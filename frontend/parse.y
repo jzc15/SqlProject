@@ -17,7 +17,7 @@ using namespace std;
     int token;
     Statement* stmt;
     Field* field;
-    Type* type;
+    TypeExpr* type;
     FieldList* fieldList;
     Value* value;
     ValueList* value_list;
@@ -190,19 +190,19 @@ field           : colName type
 
 type            : PINT '(' VALUE_INT ')'
                     {
-                        $$ = new Type(TYPE_INT, $3);
+                        $$ = new TypeExpr(INT_ENUM, $3);
                     }
                 | VARCHAR '(' VALUE_INT ')'
                     {
-                        $$ = new Type(TYPE_VARCHAR, $3);
+                        $$ = new TypeExpr(VARCHAR_ENUM, $3);
                     }
                 | DATE
                     {
-                        $$ = new Type(TYPE_DATE);
+                        $$ = new TypeExpr(DATE_ENUM);
                     }
                 | FLOAT
                     {
-                        $$ = new Type(TYPE_FLOAT);
+                        $$ = new TypeExpr(FLOAT_ENUM);
                     }
                 ;
 
@@ -328,7 +328,7 @@ setClauses      : setClause
                     }
                 ;
 
-setClause       : colName '=' value
+setClause       : colName EQ value
                     {
                         $$ = new SetClause($1, $3);
                     }

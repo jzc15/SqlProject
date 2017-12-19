@@ -1,18 +1,19 @@
-#include <ddf/DatabaseDescription.h>
-#include <ddf/Record.h>
-#include <ddf/RecordBinary.h>
+#include <ddf/dbdesc.h>
+#include <ddf/record.h>
+#include <disk/common.h>
 #include <cstdlib>
 #include <iostream>
-#include <assert.h>
+#include <cassert>
 
 using namespace std;
 
 int main()
 {
-    system("rm -rf debug");
+    rmdir("debug");
+    mkdirp("debug");
 
     { // 创建
-        DatabaseDescription dd("debug");
+        DBDesc dd("debug", "debug");
         
         auto student_table = dd.CreateTable("students");
         student_table->CreateColumn("id", "int");
@@ -32,7 +33,7 @@ int main()
     }
 
     {
-        DatabaseDescription dd("debug");
+        DBDesc dd("debug", "debug");
         auto student_table = dd.SearchTable("students");
         auto teacher_table = dd.SearchTable("teachers");
 
@@ -40,10 +41,10 @@ int main()
         student_record->SetInt("id", 10);
         student_record->SetString("name", "jhon");
         student_record->SetInt("age", 20);
-        RecordBinary student_binary = student_record->Generate();
-        cout << student_binary.size << endl;
+        data_t student_data = student_record->Generate();
+        cout << student_data->size() << endl;
 
-        auto student_record2 = student_table->RecoverRecord(student_binary);
+        auto student_record2 = student_table->RecoverRecord(student_data);
         assert(student_record2->GetInt("id") == 10);
         assert(student_record2->GetString("name") == "jhon");
         assert(student_record2->GetInt("age") == 20);
@@ -54,10 +55,10 @@ int main()
         teacher_record->SetString("name", "Dr.Green");
         teacher_record->SetString("major", "Math");
         teacher_record->SetNull("address");
-        RecordBinary teacher_binary = teacher_record->Generate();
-        cout << teacher_binary.size << endl;
+        data_t teacher_data = teacher_record->Generate();
+        cout << teacher_data->size() << endl;
 
-        auto teacher_record2 = teacher_table->RecoverRecord(teacher_binary);
+        auto teacher_record2 = teacher_table->RecoverRecord(teacher_data);
         assert(teacher_record2->GetInt("id") == 20);
         assert(teacher_record2->GetChar("type") == 'S');
         assert(teacher_record2->GetString("name") == "Dr.Green");

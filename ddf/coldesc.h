@@ -6,27 +6,27 @@
 #include <json11.hpp>
 #include <map>
 #include <memory>
-#include <filesystem/utils/pagedef.h>
+#include "typeinfo.h"
 
 using namespace std;
 using namespace json11;
 
 // 列描述类
-class ColumnDescription
+class ColDesc
 {
 public:
-    typedef shared_ptr<ColumnDescription> ptr;
+    typedef shared_ptr<ColDesc> ptr;
 
     string columnName;
     string typeName; // 小写
-    int typeEnum;
+    Type typeEnum;
     size_t length; // 长度，对于某些类型时长度限制(varchar)，对于某些类型时指定长度(char)，对于int等定长数据应该恒为1
     size_t size; // 对于定长数据，占多少*字节*的空间
     bool fixed; // 是否定长
 
-    ColumnDescription(const string& columnName, const string& typeName, size_t length);
-    ColumnDescription(const Json& info); // 从json中载入
-    ~ColumnDescription();
+    ColDesc(const string& columnName, const string& typeName, size_t length);
+    ColDesc(const Json& info); // 从json中载入
+    ~ColDesc();
 
     Json Dump();
 

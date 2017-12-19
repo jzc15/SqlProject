@@ -1,10 +1,10 @@
-#include "ColumnDescription.h"
+#include "coldesc.h"
 #include <assert.h>
-#include "common/TypeInfo.h"
+#include "typeinfo.h"
 
 using namespace std;
 
-ColumnDescription::ColumnDescription(const string& columnName, const string& typeName, size_t length)
+ColDesc::ColDesc(const string& columnName, const string& typeName, size_t length)
 {
     this->columnName = columnName;
     this->typeName = typeName;
@@ -13,7 +13,7 @@ ColumnDescription::ColumnDescription(const string& columnName, const string& typ
     normalize();
 }
 
-ColumnDescription::ColumnDescription(const Json& info)
+ColDesc::ColDesc(const Json& info)
 {
     assert(info.is_object());
     assert(info["col_name"].is_string());
@@ -27,20 +27,21 @@ ColumnDescription::ColumnDescription(const Json& info)
     normalize();
 }
 
-ColumnDescription::~ColumnDescription()
+ColDesc::~ColDesc()
 {
     // nothing
 }
 
-void ColumnDescription::normalize()
+void ColDesc::normalize()
 {
     std::transform(typeName.begin(), typeName.end(), typeName.begin(), ::tolower);
-    fixed = IsTypeFixed(typeName);
-    size = TypeSize(typeName)*length;
-    typeEnum = TypeEnum(typeName);
+    length = max((int)length, 1);
+    fixed = is_type_fixed(typeName);
+    size = type_size(typeName)*length;
+    typeEnum = type_enum(typeName);
 }
 
-Json ColumnDescription::Dump()
+Json ColDesc::Dump()
 {
     Json::object obj;
     obj["col_name"] = columnName;

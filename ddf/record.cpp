@@ -1,5 +1,5 @@
-#include "Record.h"
-#include "common/TypeInfo.h"
+#include "record.h"
+#include "typeinfo.h"
 #include <memory>
 #include <cstring>
 #include <assert.h>
@@ -7,9 +7,9 @@
 
 using namespace std;
 
-Record::Record(TableDescription* td)
+Record::Record(TableDesc* td)
+    : td(td)
 {
-    this->td = td;
     values.resize(td->ColumnCount());
     for(auto& v: values)
     {
@@ -22,7 +22,7 @@ Record::~Record()
     
 }
 
-RecordBinary Record::Generate()
+data_t Record::Generate()
 {
     size_t size = 0;
     const int column_count = td->ColumnCount();
@@ -32,7 +32,7 @@ RecordBinary Record::Generate()
     size += 4;
     for(int i = 0; i < column_count; i ++)
     {
-        ColumnDescription::ptr col = td->Column(i);
+        ColDesc::ptr col = td->Column(i);
         if (col->fixed) {
             size += col->size;
             fixed_data_size += col->size;
@@ -42,8 +42,8 @@ RecordBinary Record::Generate()
     }
     size += 2 + (column_count+7)/8 + 2 + 2*unfixed_column_count;
 
-    uchar* ptr = new uchar[size]; // FIXME
-    memset(ptr, 0, sizeof(uchar)*size);
+    data_t data = alloc_data(size);
+    uint8* ptr = data->data();
     ptr[0] = 0; // 状态A FIXME
     ptr[1] = 0; // 状态B
     *(ushort*)(ptr+2) = fixed_data_size + 4;
@@ -51,7 +51,7 @@ RecordBinary Record::Generate()
     // 定长数据
     for(int i = 0; i < column_count; i ++)
     {
-        ColumnDescription::ptr col = td->Column(i);
+        ColDesc::ptr col = td->Column(i);
         if (col->fixed) {
             if (!values[i].is_null()) {
                 switch(col->typeEnum) {
@@ -90,7 +90,7 @@ RecordBinary Record::Generate()
     offset += 2*unfixed_column_count;
     for(int i = 0, id = 0; i < column_count; i ++)
     {
-        ColumnDescription::ptr col = td->Column(i);
+        ColDesc::ptr col = td->Column(i);
         if (!col->fixed)
         {
             if (!values[i].is_null()) {
@@ -106,26 +106,26 @@ RecordBinary Record::Generate()
 
     assert(size == offset);
 
-    return (RecordBinary){ptr, size};
+    return data;
 }
 
-void Record::Recover(RecordBinary data)
+void Record::Recover(data_t data)
 {
-    const size_t size = data.size;
-    const uchar* ptr = data.ptr;
+    const size_t size = data->size();
+    const uint8* ptr = data->data();
     const int column_count = td->ColumnCount();
     const int fixed_column_count = td->FixedColumnCount();
     const int unfixed_column_count = td->UnfixedColumnCount();
 
-    const uchar statusA = ptr[0];
-    const uchar statusB = ptr[1];
+    const uint8 statusA = ptr[0];
+    const uint8 statusB = ptr[1];
     const ushort fixed_size = *(ushort*)(ptr+2);
     assert(fixed_size == td->FixedDataSize() + 4);
     
     size_t offset = 4;
     for(int i = 0; i < column_count; i ++)
     {
-        ColumnDescription::ptr col = td->Column(i);
+        ColDesc::ptr col = td->Column(i);
         if (col->fixed) {
             switch(col->typeEnum) {
                 case INT_ENUM:
@@ -155,7 +155,7 @@ void Record::Recover(RecordBinary data)
     offset += unfixed_column_count*2;
     for(int i = 0, id = 0; i < column_count; i ++)
     {
-        ColumnDescription::ptr col = td->Column(i);
+        ColDesc::ptr col = td->Column(i);
         if (!col->fixed) {
             ushort end = *(ushort*)(ptr+unfixed_offset+id*2);
             if (!((ptr[null_offset+i/8]>>(i%8))&1))
@@ -236,4 +236,64 @@ string Record::GetString(const string& columnName)
 string Record::GetString(int columnIndex)
 {
     return values[columnIndex].string_value();
+}
+
+data_t Record::GetValue(const string& columnName)
+{
+    return GetValue(td->ColumnIndex(columnName));
+}
+data_t Record::GetValue(int columnIndex)
+{
+    if (IsNull(columnIndex)) return nullptr;
+
+    ColDesc::ptr col = td->Column(columnIndex);
+    switch(col->typeEnum)
+    {
+    case INT_ENUM:
+        {
+            data_t data = alloc_data(4);
+            *(int*)(data->data()) = values[columnIndex].int_value();
+            return data;
+        }
+    case CHAR_ENUM: case VARCHAR_ENUM:
+        {
+            string x = values[columnIndex].string_value();
+            data_t data = alloc_data(x.length());
+            memcpy(data->data(), x.c_str(), x.length());
+            return data;
+        }
+    default:
+        assert(false);
+    }
+}
+
+void Record::Output()
+{
+    for(int i = 0; i < (int)td->cols.size(); i ++)
+    {
+        ColDesc::ptr col = td->cols[i];
+        cout << col->columnName << " : ";
+        if (IsNull(i))
+        {
+            cout << "NULL";
+        } else {
+            switch(col->typeEnum)
+            {
+            case INT_ENUM:
+                {
+                    cout << values[i].int_value();
+                    break;
+                }
+            case CHAR_ENUM: case VARCHAR_ENUM:
+                {
+                    cout << values[i].string_value();
+                    break;
+                }
+            default:
+                assert(false);
+            }
+        }
+        cout << " | ";
+    }
+    cout << endl;
 }

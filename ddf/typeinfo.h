@@ -1,7 +1,9 @@
 #ifndef _TYPE_INFO_H
 #define _TYPE_INFO_H
 
+#include <disk/common.h>
 #include <string>
+
 using namespace std;
 
 // 类型信息，类型均用小写字符串表示
@@ -29,8 +31,12 @@ enum Type {
     FLOAT_ENUM
 };
 
-size_t TypeSize(const string& typeName); // 该类型单个元素的大小
-bool IsTypeFixed(const string& typeName);
-int TypeEnum(const string& typeName);
+size_t type_size(const string& typeName); // 该类型单个元素的大小
+bool is_type_fixed(const string& typeName);
+Type type_enum(const string& typeName);
+string type_name(int type_enum);
+
+// return a - b;
+int compare(Type type_a, data_t data_a, Type type_b, data_t data_b);
 
 #endif // _TYPE_INFO_H

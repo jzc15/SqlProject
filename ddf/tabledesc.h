@@ -6,8 +6,8 @@
 #include <memory>
 #include <map>
 #include <json11.hpp>
-#include "ColumnDescription.h"
-#include "RecordBinary.h"
+#include "coldesc.h"
+#include <disk/common.h>
 
 using namespace std;
 using namespace json11;
@@ -15,18 +15,20 @@ using namespace json11;
 class Record;
 
 // 表描诉类
-class TableDescription
+class TableDesc
 {
 public:
-    typedef shared_ptr<TableDescription> ptr;
+    typedef shared_ptr<TableDesc> ptr;
 
-    string databaseName;
-    string tableName;
-    vector<ColumnDescription::ptr> cols;
+    const string databaseName;
+    const string tableName;
+    const string disk_filename;
 
-    TableDescription(const string& databaseName, const string& tableName);
-    TableDescription(const string& databaseName, const string& tableName, const Json& info);
-    ~TableDescription();
+    vector<ColDesc::ptr> cols;
+
+    TableDesc(const string& databaseName, const string& tableName, const string& storagePath);
+    TableDesc(const string& databaseName, const string& tableName, const string& storagePath, const Json& info);
+    ~TableDesc();
 
     // 创建新列，并不会修改数据，表结构应该在一开始就定好
     void CreateColumn(const string& columnName, const string& typeName, size_t length = 1);
@@ -38,7 +40,7 @@ public:
     shared_ptr<Record> NewRecord();
 
     // 恢复记录
-    shared_ptr<Record> RecoverRecord(RecordBinary data);
+    shared_ptr<Record> RecoverRecord(data_t data);
 
     int ColumnIndex(const string& columnName);
 
@@ -47,8 +49,8 @@ public:
     int UnfixedColumnCount();
     size_t FixedDataSize();
 
-    ColumnDescription::ptr Column(const string& columnName);
-    ColumnDescription::ptr Column(int index);
+    ColDesc::ptr Column(const string& columnName);
+    ColDesc::ptr Column(int index);
 
     Json Dump();
 
@@ -57,7 +59,7 @@ private:
     int unfixed_column_count;
     size_t fixed_data_size;
     map<string, int> columnIndex;
-    map<string, ColumnDescription::ptr> columnPtr;
+    map<string, ColDesc::ptr> columnPtr;
 };
 
 #endif // _TD_H

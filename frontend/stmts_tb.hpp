@@ -4,34 +4,25 @@
 #include <vector>
 #include <iostream>
 #include <string>
+#include <cstring>
 #include <cstdlib>
 #include <cassert>
 
-#include "const.hpp"
 #include "context.hpp"
 #include "stmts_base.hpp"
 
-#include <ddf/DatabaseDescription.h>
-
 using namespace std;
 
-class Type
+class TypeExpr
 {
 public:
-    FLAG type;
+    Type type;
     int limit;
 
-    Type(FLAG type, int limit = 0): type(type), limit(limit) {}
+    TypeExpr(Type type, int limit = 1): type(type), limit(limit) {}
     string typeName()
     {
-        switch(type)
-        {
-            case TYPE_INT: return "int";
-            case TYPE_VARCHAR: return "varchar";
-            case TYPE_DATE: return "date";
-            case TYPE_FLOAT: return "float";
-            default: assert(false);
-        }
+        return type_name(type);
     }
 };
 
@@ -41,14 +32,14 @@ public:
     bool new_col;
 
     string* colName;
-    Type* type;
+    TypeExpr* type;
     bool not_null;
 
     bool is_key;
     string* ref_tbName;
     string* ref_colName;
 
-    Field(string* colName, Type* type, bool not_null = false)
+    Field(string* colName, TypeExpr* type, bool not_null = false)
         : new_col(true), colName(colName), type(type), not_null(not_null)
         {
 
@@ -76,7 +67,7 @@ public:
 
     void run(Context* ctx)
     {
-        TableDescription::ptr td = ctx->dd->CreateTable(*tbName);
+        TableDesc::ptr td = ctx->dd->CreateTable(*tbName);
         for(auto field: fieldList->fields)
         {
             if (field->new_col)
@@ -85,6 +76,7 @@ public:
             }
         }
         td->Finalize();
+        mkfile(td->disk_filename);
     }
 };
 
@@ -97,7 +89,8 @@ public:
 
     void run(Context* ctx)
     {
-        ctx->dd->DropTable(*tbName);
+        TableDesc::ptr td = ctx->dd->DropTable(*tbName);
+        rmfile(td->disk_filename);
     }
 };
 
@@ -110,7 +103,12 @@ public:
 
     void run(Context* ctx)
     {
-        cerr << "TODO" << endl;
+        TableDesc::ptr td = ctx->dd->SearchTable(*tbName);
+        cout << "========= TABLE [" << *tbName << "] DESC ========" << endl;
+        for(int i = 0; i < (int)td->cols.size(); i ++)
+        {
+            cout << td->cols[i]->columnName << " " << td->cols[i]->typeName << endl;
+        }
     }
 };
 
@@ -125,6 +123,63 @@ public:
     Value(): value_type(VALUE_NULL) {}
     Value(int int_value): value_type(VALUE_INT), int_value(int_value) {}
     Value(string* string_value): value_type(VALUE_STRING), string_value(string_value) {}
+
+    void SetValue(Record::ptr record, ColDesc::ptr col)
+    {
+        if (value_type == VALUE_NULL)
+        {
+            record->SetNull(col->columnName);
+            return;
+        }
+        if (col->typeName == INT_TYPE)
+        {
+            assert(value_type == VALUE_INT);
+            record->SetInt(col->columnName, int_value);
+        } else if (col->typeName == CHAR_TYPE && col->length == 1) {
+            assert(value_type == VALUE_STRING);
+            record->SetChar(col->columnName, string_value[0][0]);
+        } else if ((col->typeName == CHAR_TYPE && col->length > 1) || col->typeName == VARCHAR_TYPE)
+        {
+            assert(value_type == VALUE_STRING);
+            record->SetString(col->columnName, string_value->c_str());
+        } else {
+            assert(false);
+        }
+    }
+
+    Type GetType()
+    {
+        assert(value_type != VALUE_NULL);
+        switch(value_type)
+        {
+        case VALUE_INT:
+            return INT_ENUM;
+        case VALUE_STRING:
+            return VARCHAR_ENUM;
+        default:
+            assert(false);
+        }
+    }
+    data_t GetValue()
+    {
+        switch(GetType())
+        {
+        case INT_ENUM:
+            {
+                data_t data = alloc_data(4);
+                *(int*)(data->data()) = int_value;
+                return data;
+            }
+        case VARCHAR_ENUM:
+            {
+                data_t data = alloc_data(string_value->length());
+                memcpy(data->data(), string_value->c_str(), string_value->length());
+                return data;
+            }
+        default:
+            assert(false);
+        }
+    }
 };
 
 class ValueList
@@ -148,7 +203,19 @@ public:
 
     void run(Context* ctx)
     {
-        cerr << "TODO" << endl;
+        TableDesc::ptr tb = ctx->dd->SearchTable(*tbName);
+        SlotsFile::ptr file = make_shared<SlotsFile>(tb->disk_filename);
+        for(auto list: lists->lists)
+        {
+            Record::ptr record = tb->NewRecord();
+            assert(list->values.size() == tb->cols.size());
+            for(int i = 0; i < (int)tb->cols.size(); i ++)
+            {
+                list->values[i]->SetValue(record, tb->Column(i));
+            }
+            data_t data = record->Generate();
+            file->Insert(data);
+        }
     }
 };
 
@@ -168,6 +235,22 @@ public:
     string* colName;
     Col(string* colName): tbName(NULL), colName(colName) {}
     Col(string* tbName, string* colName): tbName(tbName), colName(colName) {}
+
+    bool IsNULL(Record::ptr record) const
+    {
+        assert(tbName == NULL || *tbName == record->td->tableName);
+        return record->IsNull(*colName);
+    }
+
+    Type GetType(Record::ptr record)
+    {
+        return record->td->Column(*colName)->typeEnum;
+    }
+    data_t GetValue(Record::ptr record)
+    {
+        assert(tbName == NULL || *tbName == record->td->tableName);
+        return record->GetValue(*colName);
+    }
 };
 
 class Expr
@@ -177,6 +260,17 @@ public:
     Col* col;
     Expr(Value* value): value(value), col(NULL) {}
     Expr(Col* col): value(NULL), col(col) {}
+
+    Type GetType(Record::ptr record)
+    {
+        if (value != NULL) return value->GetType();
+        return col->GetType(record);
+    }
+    data_t GetValue(Record::ptr record)
+    {
+        if (value != NULL) return value->GetValue();
+        return col->GetValue(record);
+    }
 };
 
 class WhereClause
@@ -186,12 +280,48 @@ public:
     int op;
     Expr* expr;
     WhereClause(Col* col, int op, Expr* expr = NULL): col(col), op(op), expr(expr) {}
+
+    // return true if ok
+    bool Test(Record::ptr record) const
+    {
+        if (op == OP_IS_NULL || op == OP_NOT_NULL)
+        {
+            return col->IsNULL(record) == (op == OP_IS_NULL);
+        }
+        Type type_a = col->GetType(record);
+        data_t data_a = col->GetValue(record);
+        Type type_b = expr->GetType(record);
+        data_t data_b = expr->GetValue(record);
+        
+        if (data_a == nullptr || data_b == nullptr) return false;
+        int cmp = compare(type_a, data_a, type_b, data_b);
+        switch(op)
+        {
+        case OP_EQ: return cmp == 0;
+        case OP_NEQ: return cmp != 0;
+        case OP_LE: return cmp <= 0;
+        case OP_GE: return cmp >= 0;
+        case OP_LT: return cmp < 0;
+        case OP_GT: return cmp > 0;
+        default: assert(false);
+        }
+    }
 };
 
 class WhereClauses
 {
 public:
     vector<WhereClause*> clauses;
+
+    bool Test(Record::ptr record) const
+    {
+        bool flag = true;
+        for(int i = 0; flag && i < clauses.size(); i ++)
+        {
+            flag = flag && clauses[i]->Test(record);
+        }
+        return flag;
+    }
 };
 
 class DeleteStatement : public Statement
@@ -203,7 +333,26 @@ public:
 
     void run(Context* ctx)
     {
-        cerr << "TODO" << endl;
+        TableDesc::ptr td = ctx->dd->SearchTable(*tbName);
+        SlotsFile::ptr file = make_shared<SlotsFile>(td->disk_filename);
+        data_t current_data = file->Begin();
+        int deleted_count = 0;
+        int total_count = 0;
+        while(true)
+        {
+            if (current_data == nullptr) break;
+            Record::ptr record = td->RecoverRecord(current_data);
+            if (where->Test(record))
+            {
+                file->Delete(file->CurrentRID());
+                deleted_count ++;
+            }
+            current_data = file->Next();
+            total_count ++;
+        }
+        cout << "========= DELETE ===========" << endl;
+        cout << "TOTAL COUNT : " << total_count << endl;
+        cout << "DELETED COUNT : " << deleted_count << endl;
     }
 };
 
@@ -213,11 +362,24 @@ public:
     string* colName;
     Value* value;
     SetClause(string* colName, Value* value): colName(colName), value(value) {}
+
+    void Set(Record::ptr record)
+    {
+        value->SetValue(record, record->td->Column(*colName));
+    }
 };
 class SetClauses
 {
 public:
     vector<SetClause*> clauses;
+
+    void Set(Record::ptr record)
+    {
+        for(int i = 0; i < clauses.size(); i ++)
+        {
+            clauses[i]->Set(record);
+        }
+    }
 };
 
 class UpdateStatement : public Statement
@@ -230,7 +392,33 @@ public:
 
     void run(Context* ctx)
     {
-        cerr << "TODO" << endl;
+        TableDesc::ptr td = ctx->dd->SearchTable(*tbName);
+        SlotsFile::ptr file = make_shared<SlotsFile>(td->disk_filename);
+        data_t current_data = file->Begin();
+        int updated_count = 0;
+        int total_count = 0;
+        vector<data_t> datum_to_append;
+        while(true)
+        {
+            if (current_data == nullptr) break;
+            Record::ptr record = td->RecoverRecord(current_data);
+            if (where->Test(record))
+            {
+                file->Delete(file->CurrentRID());
+                set->Set(record);
+                datum_to_append.push_back(record->Generate());
+                updated_count ++;
+            }
+            current_data = file->Next();
+            total_count ++;
+        }
+        for(data_t x : datum_to_append)
+        {
+            file->Insert(x);
+        }
+        cout << "========= UPDATE ===========" << endl;
+        cout << "TOTAL COUNT : " << total_count << endl;
+        cout << "UPDATED COUNT : " << updated_count << endl;
     }
 };
 
@@ -263,7 +451,34 @@ public:
 
     void run(Context* ctx)
     {
-        cerr << "TODO" << endl;
+        assert(selector->col_selector == NULL); // *
+        assert(table_list->tables.size() == 1); // 
+
+        TableDesc::ptr td = ctx->dd->SearchTable(*table_list->tables[0]);
+        SlotsFile::ptr file = make_shared<SlotsFile>(td->disk_filename);
+        data_t current_data = file->Begin();
+        int selected_count = 0;
+        int total_count = 0;
+        vector<Record::ptr> records;
+        while(true)
+        {
+            if (current_data == nullptr) break;
+            Record::ptr record = td->RecoverRecord(current_data);
+            if (where->Test(record))
+            {
+                records.push_back(record);
+                selected_count ++;
+            }
+            current_data = file->Next();
+            total_count ++;
+        }
+        cout << "========= SELECT ===========" << endl;
+        cout << "TOTAL COUNT : " << total_count << endl;
+        cout << "SELECTED COUNT : " << selected_count << endl;
+        for(Record::ptr x : records)
+        {
+            x->Output();
+        }
     }
 };
 

@@ -1,40 +1,37 @@
-#include "TableDescription.h"
-#include "Record.h"
+#include "tabledesc.h"
+#include "record.h"
 #include <assert.h>
 
-TableDescription::TableDescription(const string& databaseName, const string& tableName)
+TableDesc::TableDesc(const string& databaseName, const string& tableName, const string& storagePath)
+    : databaseName(databaseName), tableName(tableName), disk_filename(path_join(storagePath, tableName + ".data"))
 {
-    this->databaseName = databaseName;
-    this->tableName = tableName;
     cols.clear();
 }
 
-TableDescription::TableDescription(const string& databaseName, const string& tableName, const Json& info)
+TableDesc::TableDesc(const string& databaseName, const string& tableName, const string& storagePath, const Json& info)
+    : databaseName(databaseName), tableName(tableName), disk_filename(path_join(storagePath, tableName + ".data"))
 {
     assert(info.is_array());
-
-    this->databaseName = databaseName;
-    this->tableName = tableName;
     cols.clear();
 
     for(auto col: info.array_items())
     {
-        cols.push_back(make_shared<ColumnDescription>(col));
+        cols.push_back(make_shared<ColDesc>(col));
     }
     Finalize();
 }
 
-TableDescription::~TableDescription()
+TableDesc::~TableDesc()
 {
 
 }
 
-void TableDescription::CreateColumn(const string& columnName, const string& typeName, size_t length)
+void TableDesc::CreateColumn(const string& columnName, const string& typeName, size_t length)
 {
-    cols.push_back(make_shared<ColumnDescription>(columnName, typeName, length));
+    cols.push_back(make_shared<ColDesc>(columnName, typeName, length));
 }
 
-void TableDescription::Finalize()
+void TableDesc::Finalize()
 {
     columnIndex.clear();
     columnPtr.clear();
@@ -55,59 +52,59 @@ void TableDescription::Finalize()
     }
 }
 
-shared_ptr<Record> TableDescription::NewRecord()
+Record::ptr TableDesc::NewRecord()
 {
     return make_shared<Record>(this);
 }
 
-shared_ptr<Record> TableDescription::RecoverRecord(RecordBinary data)
+Record::ptr TableDesc::RecoverRecord(data_t data)
 {
     auto ptr = make_shared<Record>(this);
     ptr->Recover(data);
     return ptr;
 }
 
-int TableDescription::ColumnIndex(const string& columnName)
+int TableDesc::ColumnIndex(const string& columnName)
 {
     if (columnIndex.find(columnName) == columnIndex.end())
         assert(false);
     return columnIndex[columnName];
 }
 
-int TableDescription::ColumnCount()
+int TableDesc::ColumnCount()
 {
     return cols.size();
 }
 
-int TableDescription::FixedColumnCount()
+int TableDesc::FixedColumnCount()
 {
     return fixed_column_count;
 }
 
-int TableDescription::UnfixedColumnCount()
+int TableDesc::UnfixedColumnCount()
 {
     return unfixed_column_count;
 }
 
-size_t TableDescription::FixedDataSize()
+size_t TableDesc::FixedDataSize()
 {
     return fixed_data_size;
 }
 
-ColumnDescription::ptr TableDescription::Column(const string& columnName)
+ColDesc::ptr TableDesc::Column(const string& columnName)
 {
     if (columnPtr.find(columnName) == columnPtr.end())
         assert(false);
     return columnPtr[columnName];
 }
 
-ColumnDescription::ptr TableDescription::Column(int index)
+ColDesc::ptr TableDesc::Column(int index)
 {
     assert(0 <= index && index < cols.size());
     return cols[index];
 }
 
-Json TableDescription::Dump()
+Json TableDesc::Dump()
 {
     Json::array arr;
     for(auto col: cols)

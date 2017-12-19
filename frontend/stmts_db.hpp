@@ -7,11 +7,8 @@
 #include <cstdlib>
 #include <cassert>
 
-#include "const.hpp"
 #include "context.hpp"
 #include "stmts_base.hpp"
-
-#include <ddf/DatabaseDescription.h>
 
 using namespace std;
 
@@ -23,8 +20,7 @@ public:
 
     void run(Context* ctx)
     {
-        DatabaseDescription dd(*name);
-        dd.Save();
+        mkdirp(path_join(ctx->storage_path, *name));
     }
 };
 
@@ -42,9 +38,7 @@ public:
             ctx->dd = nullptr;
         }
 
-        char buf[1024];
-        sprintf(buf, "rm -rf %s", name->c_str());
-        system(buf);
+        rmdir(path_join(ctx->storage_path, *name));
     }
 };
 
@@ -57,7 +51,7 @@ public:
     void run(Context* ctx)
     {
         ctx->current_database = *name;
-        ctx->dd = make_shared<DatabaseDescription>(*name);
+        ctx->dd = make_shared<DBDesc>(*name, path_join(ctx->storage_path, *name));
     }
 };
 
@@ -67,6 +61,7 @@ public:
     void run(Context* ctx)
     {
         vector<string> tables = ctx->dd->TableList();
+        cout << "===========SHOW TABLES===========" << endl;
         for(auto table: tables)
         {
             cout << table << endl;

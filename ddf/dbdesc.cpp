@@ -1,21 +1,20 @@
-#include "DatabaseDescription.h"
-#include <assert.h>
+#include "dbdesc.h"
+#include <cassert>
 #include <json11.hpp>
-#include "common/config.h"
+#include "config.h"
 #include <string>
 #include <fstream>
 #include <streambuf>
-#include <sys/stat.h>
 
 using namespace std;
 using namespace json11;
 
-DatabaseDescription::DatabaseDescription(const string& databaseName)
+DBDesc::DBDesc(const string& databaseName, const string& storagePath)
+    : databaseName(databaseName), storagePath(storagePath), ddf_filename(path_join(storagePath, DDF_FILENAME))
 {
-    this->databaseName = databaseName;
     tables.clear();
 
-    ifstream fd(databaseName + "/" + DDF_FILENAME);
+    ifstream fd(ddf_filename);
     if (!fd) return;
 
     string str((std::istreambuf_iterator<char>(fd)), std::istreambuf_iterator<char>());
@@ -26,23 +25,23 @@ DatabaseDescription::DatabaseDescription(const string& databaseName)
 
     for(auto iter: info.object_items())
     {
-        tables[iter.first] = make_shared<TableDescription>(databaseName, iter.first, iter.second);
+        tables[iter.first] = make_shared<TableDesc>(databaseName, iter.first, storagePath, iter.second);
     }
 }
 
-DatabaseDescription::~DatabaseDescription()
+DBDesc::~DBDesc()
 {
     Save();
 }
 
-TableDescription::ptr DatabaseDescription::CreateTable(const string& tableName)
+TableDesc::ptr DBDesc::CreateTable(const string& tableName)
 {
     assert(tables.find(tableName) == tables.end());
-    auto ptr = tables[tableName] = make_shared<TableDescription>(databaseName, tableName);
+    auto ptr = tables[tableName] = make_shared<TableDesc>(databaseName, tableName, storagePath);
     return ptr;
 }
 
-TableDescription::ptr DatabaseDescription::DropTable(const string& tableName)
+TableDesc::ptr DBDesc::DropTable(const string& tableName)
 {
     assert(tables.find(tableName) != tables.end());
     auto ptr = tables[tableName];
@@ -50,13 +49,13 @@ TableDescription::ptr DatabaseDescription::DropTable(const string& tableName)
     return ptr;
 }
 
-TableDescription::ptr DatabaseDescription::SearchTable(const string& tableName)
+TableDesc::ptr DBDesc::SearchTable(const string& tableName)
 {
     assert(tables.find(tableName) != tables.end());
     return tables[tableName];
 }
 
-vector<string> DatabaseDescription::TableList()
+vector<string> DBDesc::TableList()
 {
     vector<string> rst;
     for(auto it = tables.begin(); it != tables.end(); it ++)
@@ -66,10 +65,9 @@ vector<string> DatabaseDescription::TableList()
     return rst;
 }
 
-void DatabaseDescription::Save()
+void DBDesc::Save()
 {
-    mkdir(databaseName.c_str(), 0775);
-    ofstream fd(databaseName + "/" + DDF_FILENAME);
+    ofstream fd(ddf_filename);
     assert(fd);
 
     Json::object ddf;

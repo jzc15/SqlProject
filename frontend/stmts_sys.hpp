@@ -7,11 +7,8 @@
 #include <cstdlib>
 #include <cassert>
 
-#include "const.hpp"
 #include "context.hpp"
 #include "stmts_base.hpp"
-
-#include <ddf/DatabaseDescription.h>
 
 using namespace std;
 
