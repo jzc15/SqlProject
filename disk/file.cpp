@@ -52,6 +52,11 @@ data_t File::ReadPage(int page, bool read_only)
     return data;
 }
 
+data_t File::NewPage(bool read_only)
+{
+    return ReadPage(total_page);
+}
+
 int File::CurrentPage()
 {
     return next_page - 1;

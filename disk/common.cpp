@@ -8,11 +8,28 @@
 
 using namespace std;
 
+bool equals(data_t a, data_t b)
+{
+    if (a->size() != b->size()) return false;
+    for(int i = 0; i < (int)a->size(); i ++)
+    {
+        if (a->data()[i] != b->data()[i]) return false;
+    }
+    return true;
+}
+
 data_t alloc_data(int size)
 {
     data_t data = make_shared<vector<uint8>>();
     data->resize(size);
     memset(data->data(), 0, size);
+    return data;
+}
+
+data_t int_data(int value)
+{
+    data_t data = alloc_data(sizeof(int));
+    *(int*)(data->data()) = value;
     return data;
 }
 

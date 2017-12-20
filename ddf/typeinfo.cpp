@@ -37,10 +37,10 @@ static map<string, int> typeEnum = {
     {DATE_TYPE, DATE_ENUM},
     {FLOAT_TYPE, FLOAT_ENUM}
 };
-Type type_enum(const string& typeName)
+type_t type_enum(const string& typeName)
 {
     assert(typeEnum.find(typeName) != typeEnum.end());
-    return (Type)typeEnum[typeName];
+    return (type_t)typeEnum[typeName];
 }
 
 static map<int, string> typeName = {
@@ -56,7 +56,7 @@ string type_name(int type_enum)
     return typeName[type_enum];
 }
 
-int compare(Type type_a, data_t data_a, Type type_b, data_t data_b)
+int compare(type_t type_a, data_t data_a, type_t type_b, data_t data_b)
 {
     if (type_a == INT_ENUM)
     {

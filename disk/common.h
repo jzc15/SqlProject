@@ -15,7 +15,10 @@ typedef unsigned short uint16;
 
 typedef shared_ptr<vector<uint8>> data_t;
 
+bool equals(data_t a, data_t b);
 data_t alloc_data(int size);
+data_t int_data(int value);
+
 void mkdirp(const string& path);
 void mkfile(const string& filepath);
 void rmdir(const string& path);
@@ -26,6 +29,14 @@ int filesize(const string& filepath);
 string path_join(const string& a, const string& b);
 string get_cwd();
 
+template<typename T>
+void append(data_t data, T value)
+{
+    uint8 buf[sizeof(T)];
+    *(T*)buf = value;
+    for(int i = 0; i < sizeof(T); i ++)
+        data->push_back(buf[i]);
+}
 void debug(data_t data);
 
 #endif // DISK_COMMON_H

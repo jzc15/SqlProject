@@ -23,7 +23,7 @@ using namespace std;
 #define DATE_TYPE ("date")
 #define FLOAT_TYPE ("float")
 
-enum Type {
+enum type_t {
     INT_ENUM = 0,
     CHAR_ENUM,
     VARCHAR_ENUM,
@@ -33,10 +33,10 @@ enum Type {
 
 size_t type_size(const string& typeName); // 该类型单个元素的大小
 bool is_type_fixed(const string& typeName);
-Type type_enum(const string& typeName);
+type_t type_enum(const string& typeName);
 string type_name(int type_enum);
 
 // return a - b;
-int compare(Type type_a, data_t data_a, Type type_b, data_t data_b);
+int compare(type_t type_a, data_t data_a, type_t type_b, data_t data_b);
 
 #endif // _TYPE_INFO_H

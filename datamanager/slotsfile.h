@@ -1,6 +1,6 @@
-// 记录管理，使用槽管理
-#ifndef RECORD_MANAGER_SLOTS_FILE_H
-#define RECORD_MANAGER_SLOTS_FILE_H
+// 数据管理，使用槽管理
+#ifndef DATA_MANAGER_SLOTS_FILE_H
+#define DATA_MANAGER_SLOTS_FILE_H
 
 #include <memory>
 #include <string>
@@ -43,4 +43,4 @@ private:
     int current_rid;
 };
 
-#endif // RECORD_MANAGER_SLOTS_FILE_H
+#endif // DATA_MANAGER_SLOTS_FILE_H

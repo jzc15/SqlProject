@@ -13,13 +13,13 @@
 
 using namespace std;
 
-class TypeExpr
+class Type
 {
 public:
-    Type type;
+    type_t type;
     int limit;
 
-    TypeExpr(Type type, int limit = 1): type(type), limit(limit) {}
+    Type(type_t type, int limit = 1): type(type), limit(limit) {}
     string typeName()
     {
         return type_name(type);
@@ -32,14 +32,14 @@ public:
     bool new_col;
 
     string* colName;
-    TypeExpr* type;
+    Type* type;
     bool not_null;
 
     bool is_key;
     string* ref_tbName;
     string* ref_colName;
 
-    Field(string* colName, TypeExpr* type, bool not_null = false)
+    Field(string* colName, Type* type, bool not_null = false)
         : new_col(true), colName(colName), type(type), not_null(not_null)
         {
 
@@ -147,7 +147,7 @@ public:
         }
     }
 
-    Type GetType()
+    type_t GetType()
     {
         assert(value_type != VALUE_NULL);
         switch(value_type)
@@ -242,7 +242,7 @@ public:
         return record->IsNull(*colName);
     }
 
-    Type GetType(Record::ptr record)
+    type_t GetType(Record::ptr record)
     {
         return record->td->Column(*colName)->typeEnum;
     }
@@ -261,7 +261,7 @@ public:
     Expr(Value* value): value(value), col(NULL) {}
     Expr(Col* col): value(NULL), col(col) {}
 
-    Type GetType(Record::ptr record)
+    type_t GetType(Record::ptr record)
     {
         if (value != NULL) return value->GetType();
         return col->GetType(record);
@@ -288,9 +288,9 @@ public:
         {
             return col->IsNULL(record) == (op == OP_IS_NULL);
         }
-        Type type_a = col->GetType(record);
+        type_t type_a = col->GetType(record);
         data_t data_a = col->GetValue(record);
-        Type type_b = expr->GetType(record);
+        type_t type_b = expr->GetType(record);
         data_t data_b = expr->GetValue(record);
         
         if (data_a == nullptr || data_b == nullptr) return false;

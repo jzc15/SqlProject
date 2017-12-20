@@ -30,6 +30,9 @@ public:
     // 读取下一页，若该页不存在则返回全0的数据
     data_t NextPage(bool read_only = false);
 
+    // 新页，在最后
+    data_t NewPage(bool read_only = false);
+
     // 返回当前页
     int CurrentPage();
 
