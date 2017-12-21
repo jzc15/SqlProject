@@ -7,12 +7,7 @@
 #include <cstdlib>
 #include <cassert>
 
-#include "context.hpp"
-#include <disk/common.h>
-#include <datamanager/slotsfile.h>
-#include <ddf/dbdesc.h>
-#include <ddf/record.h>
-#include <ddf/typeinfo.h>
+#include <engine/engine.h>
 
 using namespace std;
 

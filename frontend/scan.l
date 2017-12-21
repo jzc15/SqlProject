@@ -3,6 +3,8 @@
 
 #include <iostream>
 #include <cstdlib>
+#include <string>
+#include <vector>
 #include "stmts.hpp"
 #include "frontend_parse.h"
 

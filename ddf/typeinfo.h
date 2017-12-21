@@ -34,7 +34,7 @@ enum type_t {
 size_t type_size(const string& typeName); // 该类型单个元素的大小
 bool is_type_fixed(const string& typeName);
 type_t type_enum(const string& typeName);
-string type_name(int type_enum);
+string type_name(type_t type_enum);
 
 // return a - b;
 int compare(type_t type_a, data_t data_a, type_t type_b, data_t data_b);

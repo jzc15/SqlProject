@@ -3,11 +3,15 @@
 #include <iostream>
 #include <cstdio>
 #include <string>
+#include <vector>
 
 #include "stmts.hpp"
 #include "helper.h"
 
 using namespace std;
+
+// #define DELETE(x) /*nothing*/
+#define DELETE(x) {delete x;}
 
 %}
 
@@ -16,21 +20,22 @@ using namespace std;
     int int_value;
     int token;
     Statement* stmt;
-    Field* field;
+    vector<CreateTable::Field>* fields;
+    CreateTable::Field* field;
     Type* type;
-    FieldList* fieldList;
     Value* value;
-    ValueList* value_list;
-    ValueLists* value_lists;
-    Col* col;
+    vector<Value>* values;
+    vector<vector<Value>>* values_list;
+    Column* column;
     Expr* expr;
-    WhereClause* where_clause;
-    WhereClauses* where_clauses;
-    SetClause* set_clause;
-    SetClauses* set_clauses;
+    Condition* cond;
+    vector<Condition>* conds;
+    Condition::OP op;
+    Assignment* assignment;
+    vector<Assignment>* assignments;
     Selector* selector;
-    ColSelector* col_selector;
-    TableList* table_list;
+    vector<Column>* columns;
+    vector<string>* strings;
 }
 
 %token DATABASE DATABASES TABLE TABLES
@@ -43,24 +48,25 @@ using namespace std;
 %token NEQ LE GE EQ LT GT
 
 %type <str> dbName tbName colName IDENTIFIER VALUE_STRING
-%type <int_value> VALUE_INT op
+%type <int_value> VALUE_INT
 %type <pro> program
 %type <stmt> stmt sysStmt dbStmt tbStmt idxStmt
 %type <field> field
 %type <type> type
-%type <fieldList> fieldList
+%type <fields> fieldList
 %type <value> value
-%type <value_list> valueList
-%type <value_lists> valueLists
-%type <col> col
+%type <values> valueList
+%type <values_list> valueLists
+%type <column> col
 %type <expr> expr
-%type <where_clause> whereClause
-%type <where_clauses> whereClauses
-%type <set_clause> setClause
-%type <set_clauses> setClauses
+%type <cond> whereClause
+%type <conds> whereClauses
+%type <op> op
+%type <assignment> setClause
+%type <assignments> setClauses
 %type <selector> selector
-%type <col_selector> colSelector
-%type <table_list> tableList
+%type <columns> colSelector
+%type <strings> tableList
 
 %start program
 
@@ -102,15 +108,18 @@ sysStmt         : SHOW DATABASES
 
 dbStmt          : CREATE DATABASE dbName
                     {
-                        $$ = new CreateDatabase($3);
+                        $$ = new CreateDatabase(*$3);
+                        DELETE($3);
                     }
                 | DROP DATABASE dbName
                     {
-                        $$ = new DropDatabase($3);
+                        $$ = new DropDatabase(*$3);
+                        DELETE($3);
                     }
                 | USE dbName
                     {
-                        $$ = new UseDatabase($2);
+                        $$ = new UseDatabase(*$2);
+                        DELETE($2);
                     }
                 | SHOW TABLES
                     {
@@ -120,71 +129,107 @@ dbStmt          : CREATE DATABASE dbName
 
 tbStmt          : CREATE TABLE tbName '(' fieldList ')'
                     {
-                        $$ = new CreateTable($3, $5);
+                        $$ = new CreateTable(*$3, *$5);
+                        DELETE($3);
+                        DELETE($5);
                     }
                 | DROP TABLE tbName
                     {
-                        $$ = new DropTable($3);
+                        $$ = new DropTable(*$3);
+                        DELETE($3);
                     }
                 | DESC tbName
                     {
-                        $$ = new DescTable($2);
+                        $$ = new DescTable(*$2);
+                        DELETE($2);
                     }
                 | INSERT INTO tbName VALUES valueLists
                     {
-                        $$ = new InsertStatement($3, $5);
+                        $$ = new InsertStatement(*$3, *$5);
+                        DELETE($3);
+                        DELETE($5);
                     }
                 | DELETE FROM tbName WHERE whereClauses
                     {
-                        $$ = new DeleteStatement($3, $5);
+                        $$ = new DeleteStatement(*$3, *$5);
+                        DELETE($3);
+                        DELETE($5);
                     }
                 | UPDATE tbName SET setClauses WHERE whereClauses
                     {
-                        $$ = new UpdateStatement($2, $4, $6);
+                        $$ = new UpdateStatement(*$2, *$4, *$6);
+                        DELETE($2);
+                        DELETE($4);
+                        DELETE($6);
                     }
                 | SELECT selector FROM tableList WHERE whereClauses
                     {
-                        $$ = new SelectStatement($2, $4, $6);
+                        $$ = new SelectStatement(*$2, *$4, *$6);
+                        DELETE($2);
+                        DELETE($4);
+                        DELETE($6);
                     }
                 ;
 
 idxStmt         : CREATE INDEX tbName '(' colName ')'
                     {
-                        $$ = new CreateIndexStatement($3, $5);
+                        $$ = new CreateIndexStatement(*$3, *$5);
+                        DELETE($3);
+                        DELETE($5);
                     }
                 | DROP INDEX tbName '(' colName ')'
                     {
-                        $$ = new CreateIndexStatement($3, $5);
+                        $$ = new CreateIndexStatement(*$3, *$5);
+                        DELETE($3);
+                        DELETE($5);
                     }
                 ;
 
 fieldList       : field
                     {
-                        $$ = new FieldList();
-                        $$->fields.push_back($1);
+                        $$ = new vector<CreateTable::Field>();
+                        $$->push_back(*$1);
+                        DELETE($1);
                     }
                 | fieldList ',' field
                     {
                         $$ = $1;
-                        $$->fields.push_back($3);
+                        $$->push_back(*$3);
+                        DELETE($3);
                     }
                 ;
 
 field           : colName type
                     {
-                        $$ = new Field($1, $2);
+                        $$ = new CreateTable::Field();
+                        $$->type_no = 1;
+                        $$->column_define = ColumnDefine(*$1, *$2, true);
+                        DELETE($1);
+                        DELETE($2);
                     }
                 | colName type NOT TNULL
                     {
-                        $$ = new Field($1, $2, true);
+                        $$ = new CreateTable::Field();
+                        $$->type_no = 2;
+                        $$->column_define = ColumnDefine(*$1, *$2, false);
+                        DELETE($1);
+                        DELETE($2);
                     }
                 | PRIMARY KEY '(' colName ')'
                     {
-                        $$ = new Field($4, true, NULL, NULL);
+                        $$ = new CreateTable::Field();
+                        $$->type_no = 3;
+                        $$->primary_column = *$4;
+                        DELETE($4);
                     }
                 | FOREIGN KEY '(' colName ')' REFERENCES tbName '(' colName ')'
                     {
-                        $$ = new Field($4, false, $7, $9);
+                        $$ = new CreateTable::Field();
+                        $$->type_no = 4;
+                        $$->foreign_column = ColumnForeign(*$4, *$7, *$9);
+                        DELETE($4);
+                        DELETE($7);
+                        DELETE($9);
                     }
                 ;
 
@@ -208,163 +253,201 @@ type            : PINT '(' VALUE_INT ')'
 
 valueLists      : '(' valueList ')'
                     {
-                        $$ = new ValueLists();
-                        $$->lists.push_back($2);
+                        $$ = new vector<vector<Value>>();
+                        $$->push_back(*$2);
+                        DELETE($2);
                     }
                 | valueLists ',' '(' valueList ')'
                     {
                         $$ = $1;
-                        $$->lists.push_back($4);
+                        $$->push_back(*$4);
+                        DELETE($4);
                     }
                 ;
 
 valueList       : value
                     {
-                        $$ = new ValueList();
-                        $$->values.push_back($1);
+                        $$ = new vector<Value>();
+                        $$->push_back(*$1);
+                        DELETE($1);
                     }
                 | valueList ',' value
                     {
                         $$ = $1;
-                        $$->values.push_back($3);
+                        $$->push_back(*$3);
+                        DELETE($3);
                     }
                 ;
 
 value           : VALUE_INT
                     {
-                        $$ = new Value($1);
+                        $$ = new Value();
+                        *$$ = Value::int_value($1);
                     }
                 | VALUE_STRING
                     {
-                        $$ = new Value($1);
+                        $$ = new Value();
+                        *$$ = Value::string_value(*$1);
+                        DELETE($1);
                     }
                 | TNULL
                     {
                         $$ = new Value();
+                        *$$ = Value::null_value();
                     }
                 ;
 
 whereClauses    : whereClause
                     {
-                        $$ = new WhereClauses();
-                        $$->clauses.push_back($1);
+                        $$ = new vector<Condition>();
+                        $$->push_back(*$1);
+                        DELETE($1);
                     }
                 | whereClauses AND whereClause
                     {
                         $$ = $1;
-                        $$->clauses.push_back($3);
+                        $$->push_back(*$3);
+                        DELETE($3);
                     }
                 ;
 
 whereClause     : col op expr
                     {
-                        $$ = new WhereClause($1, $2, $3);
+                        $$ = new Condition();
+                        *$$ = Condition::expr_condition(*$1, $2, *$3);
+                        DELETE($1);
+                        DELETE($3);
                     }
                 | col IS TNULL
                     {
-                        $$ = new WhereClause($1, OP_IS_NULL);
+                        $$ = new Condition();
+                        *$$ = Condition::is_null_condition(*$1);
+                        DELETE($1);
                     }
                 | col IS NOT TNULL
                     {
-                        $$ = new WhereClause($1, OP_NOT_NULL);
+                        $$ = new Condition();
+                        *$$ = Condition::not_null_condition(*$1);
+                        DELETE($1);
                     }
                 ;
 
 col             : colName
                     {
-                        $$ = new Col($1);
+                        $$ = new Column();
+                        *$$ = Column::create_column(*$1);
+                        DELETE($1);
                     }
                 | tbName '.' colName
                     {
-                        $$ = new Col($1, $3);
+                        $$ = new Column();
+                        *$$ = Column::create_column(*$1, *$3);
+                        DELETE($1);
+                        DELETE($3);
                     }
                 ;
 
 op              : EQ
                     {
-                        $$ = OP_EQ;
+                        $$ = Condition::OP_EQ;
                     }
                 | NEQ
                     {
-                        $$ = OP_NEQ;
+                        $$ = Condition::OP_NEQ;
                     }
                 | LE
                     {
-                        $$ = OP_LE;
+                        $$ = Condition::OP_LE;
                     }
                 | GE
                     {
-                        $$ = OP_GE;
+                        $$ = Condition::OP_GE;
                     }
                 | LT
                     {
-                        $$ = OP_LT;
+                        $$ = Condition::OP_LT;
                     }
                 | GT
                     {
-                        $$ = OP_GT;
+                        $$ = Condition::OP_GT;
                     }
                 ;
 
 expr            : value
                     {
-                        $$ = new Expr($1);
+                        $$ = new Expr();
+                        *$$ = Expr::value_expr(*$1);
+                        DELETE($1);
                     }
                 | col
                     {
-                        $$ = new Expr($1);
+                        $$ = new Expr();
+                        *$$ = Expr::column_expr(*$1);
+                        DELETE($1);
                     }
                 ;
 
 setClauses      : setClause
                     {
-                        $$ = new SetClauses();
-                        $$->clauses.push_back($1);
+                        $$ = new vector<Assignment>();
+                        $$->push_back(*$1);
+                        DELETE($1);
                     }
                 | setClauses ',' setClause
                     {
                         $$ = $1;
-                        $$->clauses.push_back($3);
+                        $$->push_back(*$3);
+                        DELETE($3);
                     }
                 ;
 
 setClause       : colName EQ value
                     {
-                        $$ = new SetClause($1, $3);
+                        $$ = new Assignment();
+                        *$$ = Assignment::assign(*$1, *$3);
+                        DELETE($1);
+                        DELETE($3);
                     }
                 ;
 
 selector        : '*'
                     {
                         $$ = new Selector();
+                        *$$ = Selector::all_selector();
                     }
                 | colSelector
                     {
-                        $$ = new Selector($1);
+                        $$ = new Selector();
+                        *$$ = Selector::columns_selector(*$1);
+                        DELETE($1);
                     }
                 ;
 
 colSelector     : col
                     {
-                        $$ = new ColSelector();
-                        $$->cols.push_back($1);
+                        $$ = new vector<Column>();
+                        $$->push_back(*$1);
+                        DELETE($1);
                     }
                 | colSelector ',' col
                     {
                         $$ = $1;
-                        $$->cols.push_back($3);
+                        $$->push_back(*$3);
+                        DELETE($3);
                     }
                 ;
 
 tableList       : tbName
                     {
-                        $$ = new TableList();
-                        $$->tables.push_back($1);
+                        $$ = new vector<string>();
+                        $$->push_back(*$1);
+                        DELETE($1);
                     }
                 | tableList ',' tbName
                     {
                         $$ = $1;
-                        $$->tables.push_back($3);
+                        $$->push_back(*$3);
+                        DELETE($3);
                     }
                 ;
 

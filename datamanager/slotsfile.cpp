@@ -22,7 +22,7 @@ int SlotsFile::Insert(data_t data)
         int free_offset = *(int*)(page->data()+PAGE_SIZE-4);
         int n_slots = *(int*)(page->data()+PAGE_SIZE-8);
         int free_space = PAGE_SIZE - 8 - n_slots*8 - free_offset;
-        if (free_space >= data->size() + 8) break;
+        if (free_space >= (int)data->size() + 8) break;
     }
 
     data_t page = file->ReadPage(file->CurrentPage(), false);
@@ -96,7 +96,7 @@ data_t SlotsFile::Next()
         while(slot_id < n_slots)
         {
             int offset = *(int*)(page->data()+PAGE_SIZE-8-slot_id*8-8);
-            int size = *(int*)(page->data()+PAGE_SIZE-8-slot_id*8-4);
+            // int size = *(int*)(page->data()+PAGE_SIZE-8-slot_id*8-4);
             if (offset >= 0) break;
             slot_id ++;
         }

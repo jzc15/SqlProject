@@ -9,7 +9,7 @@ find_package(BISON)
 add_compile_options(--std=c++14 -Wall -g)
 
 # 模块
-set(MODULES disk datamanager ddf indices frontend)
+set(MODULES disk datamanager ddf indices engine frontend)
 set(NOEMPTY_MODULES "")
 foreach(M ${MODULES})
     file(GLOB_RECURSE SOURCES ${M}/*.cpp)

@@ -7,7 +7,6 @@
 #include <cstdlib>
 #include <cassert>
 
-#include "context.hpp"
 #include "stmts_base.hpp"
 
 using namespace std;
@@ -15,26 +14,26 @@ using namespace std;
 class CreateIndexStatement : public Statement
 {
 public:
-    string* tbName;
-    string* colName;
-    CreateIndexStatement(string* tbName, string* colName) : tbName(tbName), colName(colName) {}
+    string tb_name;
+    string column_name;
+    CreateIndexStatement(const string& tb_name, const string& column_name) : tb_name(tb_name), column_name(column_name) {}
 
     void run(Context* ctx)
     {
-        cerr << "TODO" << endl;
+        create_index(ctx, tb_name, column_name);
     }
 };
 
 class DropIndexStatement : public Statement
 {
 public:
-    string* tbName;
-    string* colName;
-    DropIndexStatement(string* tbName, string* colName) : tbName(tbName), colName(colName) {}
+    string tb_name;
+    string column_name;
+    DropIndexStatement(const string& tb_name, const string& column_name) : tb_name(tb_name), column_name(column_name) {}
 
     void run(Context* ctx)
     {
-        cerr << "TODO" << endl;
+        drop_index(ctx, tb_name, column_name);
     }
 };
 

@@ -50,9 +50,9 @@ static map<int, string> typeName = {
     {DATE_ENUM, DATE_TYPE},
     {FLOAT_ENUM, FLOAT_TYPE}
 };
-string type_name(int type_enum)
+string type_name(type_t type_enum)
 {
-    assert(typeName.find(type_enum) != typeName.end());
+    assert(typeName.find((int)type_enum) != typeName.end());
     return typeName[type_enum];
 }
 
@@ -65,10 +65,10 @@ int compare(type_t type_a, data_t data_a, type_t type_b, data_t data_b)
     } else if (type_a == CHAR_ENUM || type_a == VARCHAR_ENUM)
     {
         assert(type_b == CHAR_ENUM || type_b == VARCHAR_ENUM);
-        for(int i = 0; i < data_a->size() || i < data_b->size(); i ++)
+        for(int i = 0; i < (int)data_a->size() || i < (int)data_b->size(); i ++)
         {
-            if (i == data_b->size()) return -1;
-            if (i == data_a->size()) return 1;
+            if (i == (int)data_b->size()) return -1;
+            if (i == (int)data_a->size()) return 1;
             if (data_a->data()[i] != data_b->data()[i]) return data_a->data()[i] - data_b->data()[i];
         }
         return 0;
@@ -77,7 +77,8 @@ int compare(type_t type_a, data_t data_a, type_t type_b, data_t data_b)
         assert(false);
     } else if (type_a == FLOAT_ENUM)
     {
-        assert(false);
+        assert(type_b == FLOAT_ENUM);
+        return *(float*)(data_a->data()) - *(float*)(data_b->data());
     } else {
         assert(false);
     }

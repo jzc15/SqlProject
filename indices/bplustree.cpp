@@ -19,7 +19,7 @@ int BPlusTree::Iterator::Value()
 {
     assert(0 <= key_pos && key_pos < node->size);
     data_t value_list = tree->data_file->Fetch(node->children_entries[key_pos]);
-    assert(0 <= value_pos && value_pos < (int)value_list->size()/sizeof(int));
+    assert(0 <= value_pos && value_pos < (int)(value_list->size()/sizeof(int)));
     return ((int*)(value_list->data()))[value_pos];
 }
 
@@ -52,9 +52,9 @@ void BPlusTree::Iterator::Next()
 {
     assert(0 <= key_pos && key_pos < node->size);
     data_t value_list = tree->data_file->Fetch(node->children_entries[key_pos]);
-    assert(0 <= value_pos && value_pos < (int)value_list->size()/sizeof(int));
+    assert(0 <= value_pos && value_pos < (int)(value_list->size()/sizeof(int)));
 
-    if (value_pos+1 < (int)value_list->size()/sizeof(int))
+    if (value_pos+1 < (int)(value_list->size()/sizeof(int)))
     {
         value_pos ++;
     } else if (key_pos+1 < node->size) {
@@ -247,29 +247,7 @@ void BPlusTree::Debug(node_t* node)
 
 int BPlusTree::Compare(data_t a, data_t b)
 {
-    switch(type)
-    {
-    case INT_ENUM:
-        return *(int*)(a->data()) - *(int*)(b->data());
-    case FLOAT_ENUM:
-        {
-            float a_value = *(float*)(a->data());
-            float b_value = *(float*)(b->data());
-            return a_value < b_value ? -1 : (a_value == b_value ? 0 : 1);
-        }
-    case CHAR_ENUM: case VARCHAR_ENUM:
-        {
-            for(int i = 0; i < a->size() || i < b->size(); i ++)
-            {
-                if (i == a->size()) return -1;
-                if (i == b->size()) return 1;
-                if (a->data()[i] != b->data()[i]) return a->data()[i] - b->data()[i];
-            }
-            return 0;
-        }
-    default:
-        assert(false);
-    }
+    return compare(type, a, type, b);
 }
 
 void BPlusTree::SplitChild(node_t* node, int idx)
@@ -448,7 +426,7 @@ void BPlusTree::DeleteLargeEnough(node_t* node, data_t key, int value)
         data_t value_list = data_file->Fetch(node->children_entries[pos]);
         int* values = (int*)(value_list->data());
         int value_pos = -1;
-        for(int i = 0; i < (int)value_list->size()/sizeof(int); i ++)
+        for(int i = 0; i < (int)(value_list->size()/sizeof(int)); i ++)
             if (values[i] == value)
             {
                 value_pos = i;
@@ -458,7 +436,7 @@ void BPlusTree::DeleteLargeEnough(node_t* node, data_t key, int value)
         {
             cout << "ERROR AT DELETE KEY : "; Output(key); cout << " value = " << value << endl;
         } else {
-            for(int i = value_pos; i+1 < (int)value_list->size()/sizeof(int); i ++)
+            for(int i = value_pos; i+1 < (int)(value_list->size()/sizeof(int)); i ++)
                 values[i] = values[i+1];
             value_list->resize(value_list->size() - sizeof(int));
             data_file->Delete(node->children_entries[pos]);

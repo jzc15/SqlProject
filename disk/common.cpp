@@ -5,6 +5,9 @@
 #include <cassert>
 #include <cstring>
 #include <iostream>
+#include <stdio.h>
+#include <sys/types.h>
+#include <dirent.h>
 
 using namespace std;
 
@@ -30,6 +33,20 @@ data_t int_data(int value)
 {
     data_t data = alloc_data(sizeof(int));
     *(int*)(data->data()) = value;
+    return data;
+}
+
+data_t float_data(float value)
+{
+    data_t data = alloc_data(sizeof(float));
+    *(float*)(data->data()) = value;
+    return data;
+}
+
+data_t string_data(string str)
+{
+    data_t data = alloc_data(str.length());
+    memcpy(data->data(), str.c_str(), str.length());
     return data;
 }
 
@@ -74,6 +91,22 @@ int filesize(const string& filepath)
     fclose(fd);
 
     return sz;
+}
+
+vector<string> listdir(const string& path)
+{
+    DIR *dp;
+    struct dirent *ep;
+    vector<string> ans;
+
+    dp = opendir ("./");
+    if (dp != NULL)
+    {
+        while (ep = readdir (dp)) ans.push_back(ep->d_name);
+        closedir(dp);
+    }
+
+    return ans;
 }
 
 string path_join(const string& a, const string& b)

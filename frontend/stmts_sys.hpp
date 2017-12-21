@@ -7,7 +7,6 @@
 #include <cstdlib>
 #include <cassert>
 
-#include "context.hpp"
 #include "stmts_base.hpp"
 
 using namespace std;
@@ -17,7 +16,7 @@ class ShowDatabases : public Statement
 public:
     void run(Context* ctx)
     {
-        cerr << "TODO" << endl;
+        show_databases(ctx);
     }
 };
 

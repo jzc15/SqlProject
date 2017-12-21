@@ -100,7 +100,7 @@ ColDesc::ptr TableDesc::Column(const string& columnName)
 
 ColDesc::ptr TableDesc::Column(int index)
 {
-    assert(0 <= index && index < cols.size());
+    assert(0 <= index && index < (int)cols.size());
     return cols[index];
 }
 
