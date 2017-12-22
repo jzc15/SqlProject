@@ -6,7 +6,7 @@ find_package(FLEX)
 find_package(BISON)
 
 # 编译选项
-add_compile_options(--std=c++14 -Wall -g)
+add_compile_options(--std=c++14 -Wall -g -O3)
 
 # 模块
 set(MODULES disk datamanager ddf indices engine frontend)
@@ -20,6 +20,8 @@ foreach(M ${MODULES})
         set(NOEMPTY_MODULES ${NOEMPTY_MODULES} ${M})
     endif()
 endforeach()
+
+list(REMOVE_ITEM NOEMPTY_MODULES frontend)
 
 # flex&yacc
 BISON_TARGET(Parser frontend/parse.y ${CMAKE_CURRENT_BINARY_DIR}/frontend_parse.cc COMPILE_FLAGS --defines=${CMAKE_CURRENT_BINARY_DIR}/frontend_parse.h)
@@ -40,3 +42,6 @@ foreach(TARGET_PATH ${TARGETS_CPP})
     endif()
     target_link_libraries(${TARGET} json11)
 endforeach()
+
+target_link_libraries(main frontend)
+target_link_libraries(frontendtest frontend)

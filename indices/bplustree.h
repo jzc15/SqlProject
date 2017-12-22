@@ -73,6 +73,8 @@ public:
     BPlusTree(const string& filename, type_t type);
     ~BPlusTree();
 
+    static void RemoveIndex(const string& filename);
+
     void Debug();
 
     // 插入
@@ -98,6 +100,12 @@ public:
 
     Iterator Begin();
 
+    // 第一个>=key的位置
+    Iterator Lower(data_t key);
+
+    // 第一个>key的位置
+    Iterator Upper(data_t key);
+
 private:
     const string filename;
     const type_t type;
@@ -115,9 +123,6 @@ private:
     void Output(data_t data);
 
     void Debug(node_t* node);
-
-    // a - b
-    int Compare(data_t a, data_t b);
 
     // 将node的地idx个儿子(满的)分裂成两个，node未满
     void SplitChild(node_t* node, int idx);

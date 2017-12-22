@@ -16,6 +16,10 @@ class DBDesc
 public:
     typedef shared_ptr<DBDesc> ptr;
 
+    const string databaseName;
+    const string storagePath;
+    const string ddf_filename;
+
     DBDesc(const string& databaseName, const string& storagePath);
     ~DBDesc();
 
@@ -31,9 +35,6 @@ public:
     void Save();
 
 private:
-    const string databaseName;
-    const string storagePath;
-    const string ddf_filename;
     map<string, TableDesc::ptr> tables;
 };
 

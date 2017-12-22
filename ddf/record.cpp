@@ -13,7 +13,7 @@ Record::Record(TableDesc* td)
     values.resize(td->ColumnCount());
     for(auto& v: values)
     {
-        v = Json(nullptr);
+        v = nullptr;
     }
 }
 
@@ -36,8 +36,8 @@ data_t Record::Generate()
         if (col->fixed) {
             size += col->size;
             fixed_data_size += col->size;
-        } else { // FIXME 目前只有varchar和text时变长
-            size += values[i].string_value().length();
+        } else {
+            if (values[i] != nullptr) size += values[i]->size();
         }
     }
     size += 2 + (column_count+7)/8 + 2 + 2*unfixed_column_count;
@@ -53,19 +53,22 @@ data_t Record::Generate()
     {
         ColDesc::ptr col = td->Column(i);
         if (col->fixed) {
-            if (!values[i].is_null()) {
+            if (values[i] != nullptr) {
                 switch(col->typeEnum) {
                     case INT_ENUM:
-                        *(int*)(ptr+offset) = values[i].int_value();
+                        *(int*)(ptr+offset) = *(int*)(values[i]->data());
+                        break;
+                    case FLOAT_ENUM:
+                        *(float*)(ptr+offset) = *(float*)(values[i]->data());
                         break;
                     case CHAR_ENUM:
                         {
-                            string data = values[i].string_value();
-                            memset(ptr+offset, ' ', col->length);
-                            memcpy(ptr+offset, data.c_str(), min(col->length, data.length()));
+                            memcpy(ptr+offset, values[i]->data(), values[i]->size());
                         }
                         break;
-                    default:assert(false);break;
+                    default:
+                        assert(false);
+                        break;
                 }
             }
             offset += col->size;
@@ -76,7 +79,7 @@ data_t Record::Generate()
     // null位图
     for(int i = 0; i < column_count; i ++)
     {
-        if (values[i].is_null())
+        if (values[i] == nullptr)
         {
             ptr[offset+i/8] |= 1<<(i%8);
         }
@@ -93,11 +96,9 @@ data_t Record::Generate()
         ColDesc::ptr col = td->Column(i);
         if (!col->fixed)
         {
-            if (!values[i].is_null()) {
-                string data = values[i].string_value(); // FIXME 目前只有字符串可以变长
-                size_t length = min(data.length(), col->length);
-                memcpy(ptr+offset, data.c_str(), length);
-                offset += length;
+            if (values[i] != nullptr) {
+                memcpy(ptr+offset, values[i]->data(), values[i]->size());
+                offset += values[i]->size();
             }
             *(ushort*)(ptr+unfixed_offset+id*2) = offset;
             id ++;
@@ -129,10 +130,13 @@ void Record::Recover(data_t data)
         if (col->fixed) {
             switch(col->typeEnum) {
                 case INT_ENUM:
-                    values[i] = Json(*(int*)(ptr+offset));
+                    values[i] = int_data(*(int*)(ptr+offset));
+                    break;
+                case FLOAT_ENUM:
+                    values[i] = float_data(*(float*)(ptr+offset));
                     break;
                 case CHAR_ENUM:
-                    values[i] = Json(string((char*)(ptr+offset), col->length));
+                    values[i] = string_data(string((char*)(ptr+offset), col->length));
                     break;
                 default: assert(false); break;
             }
@@ -145,11 +149,12 @@ void Record::Recover(data_t data)
     for(int i = 0; i < column_count; i ++)
     {
         if ((ptr[null_offset+i/8]>>(i%8))&1) {
-            values[i] = Json(nullptr);
+            values[i] = nullptr;
         }
     }
     offset += (column_count+7)/8;
     assert(*(ushort*)(ptr+offset) == unfixed_column_count);
+    
     offset += 2;
     const size_t unfixed_offset = offset;
     offset += unfixed_column_count*2;
@@ -159,7 +164,7 @@ void Record::Recover(data_t data)
         if (!col->fixed) {
             ushort end = *(ushort*)(ptr+unfixed_offset+id*2);
             if (!((ptr[null_offset+i/8]>>(i%8))&1))
-                values[i] = Json(string((char*)(ptr+offset), end-offset));
+                values[i] = string_data(string((char*)(ptr+offset), end-offset));
             offset = end;
             id ++;
         }
@@ -167,75 +172,32 @@ void Record::Recover(data_t data)
     assert(offset == size);
 }
 
-void Record::SetNull(const string& columnName)
+void Record::SetValue(const string& columnName, data_t data)
 {
-    values[td->ColumnIndex(columnName)] = Json(nullptr);
-}
-void Record::SetNull(int columnIndex)
-{
-    values[columnIndex] = Json(nullptr);
-}
-bool Record::IsNull(const string& columnName)
-{
-    return values[td->ColumnIndex(columnName)].is_null();
-}
-bool Record::IsNull(int columnIndex)
-{
-    return values[columnIndex].is_null();
+    SetValue(td->ColumnIndex(columnName), data);
 }
 
-// int
-void Record::SetInt(const string& columnName, int value)
+void Record::SetValue(int columnIndex, data_t data)
 {
-    values[td->ColumnIndex(columnName)] = Json(value);
-}
-void Record::SetInt(int columnIndex, int value)
-{
-    values[columnIndex] = Json(value);
-}
-int Record::GetInt(const string& columnName)
-{
-    return values[td->ColumnIndex(columnName)].int_value();
-}
-int Record::GetInt(int columnIndex)
-{
-    return values[columnIndex].int_value();
-}
+    values[columnIndex] = data = clone(data);
+    if (data == nullptr) return;
 
-// char
-void Record::SetChar(const string& columnName, char value)
-{
-    values[td->ColumnIndex(columnName)] = Json(string(&value, 1));
-}
-void Record::SetChar(int columnIndex, char value)
-{
-    values[columnIndex] = Json(string(&value, 1));
-}
-char Record::GetChar(const string& columnName)
-{
-    return values[td->ColumnIndex(columnName)].string_value()[0];
-}
-char Record::GetChar(int columnIndex)
-{
-    return values[columnIndex].string_value()[0];
-}
-
-// char(10), varchar(200)
-void Record::SetString(const string& columnName, const char* value)
-{
-    values[td->ColumnIndex(columnName)] = Json(value);
-}
-void Record::SetString(int columnIndex, const char* value)
-{
-    values[columnIndex] = Json(value);
-}
-string Record::GetString(const string& columnName)
-{
-    return values[td->ColumnIndex(columnName)].string_value();
-}
-string Record::GetString(int columnIndex)
-{
-    return values[columnIndex].string_value();
+    ColDesc::ptr col = td->Column(columnIndex);
+    switch(col->typeEnum)
+    {
+    case INT_ENUM: case FLOAT_ENUM:
+        assert(data->size() == 4);
+        break;
+    case CHAR_ENUM:
+        if ((int)data->size() > col->length) data->resize(col->length);
+        while((int)data->size() < col->length) data->push_back(' ');
+        break;
+    case VARCHAR_ENUM:
+        data->resize(min(data->size(), col->length));
+        break;
+    default:
+        assert(false);
+    }
 }
 
 data_t Record::GetValue(const string& columnName)
@@ -244,27 +206,75 @@ data_t Record::GetValue(const string& columnName)
 }
 data_t Record::GetValue(int columnIndex)
 {
-    if (IsNull(columnIndex)) return nullptr;
+    return values[columnIndex];
+}
 
-    ColDesc::ptr col = td->Column(columnIndex);
-    switch(col->typeEnum)
-    {
-    case INT_ENUM:
-        {
-            data_t data = alloc_data(4);
-            *(int*)(data->data()) = values[columnIndex].int_value();
-            return data;
-        }
-    case CHAR_ENUM: case VARCHAR_ENUM:
-        {
-            string x = values[columnIndex].string_value();
-            data_t data = alloc_data(x.length());
-            memcpy(data->data(), x.c_str(), x.length());
-            return data;
-        }
-    default:
-        assert(false);
-    }
+void Record::SetInt(const string& columnName, int value)
+{
+    SetInt(td->ColumnIndex(columnName), value);
+}
+void Record::SetInt(int columnIndex, int value)
+{
+    values[columnIndex] = int_data(value);
+}
+int Record::GetInt(const string& columnName)
+{
+    return GetInt(td->ColumnIndex(columnName));
+}
+int Record::GetInt(int columnIndex)
+{
+    return *(int*)(values[columnIndex]->data());
+}
+
+void Record::SetFloat(const string& columnName, float value)
+{
+    SetFloat(td->ColumnIndex(columnName), value);
+}
+void Record::SetFloat(int columnIndex, float value)
+{
+    values[columnIndex] = float_data(value);
+}
+float Record::GetFloat(const string& columnName)
+{
+    return GetFloat(td->ColumnIndex(columnName));
+}
+float Record::GetFloat(int columnIndex)
+{
+    return *(float*)(values[columnIndex]->data());
+}
+
+void Record::SetString(const string& columnName, const string& value)
+{
+    return SetString(td->ColumnIndex(columnName), value);
+}
+void Record::SetString(int columnIndex, const string& value)
+{
+    values[columnIndex] = string_data(value);
+}
+string Record::GetString(const string& columnName)
+{
+    return GetString(td->ColumnIndex(columnName));
+}
+string Record::GetString(int columnIndex)
+{
+    return string((char*)values[columnIndex]->data(), values[columnIndex]->size());
+}
+
+void Record::SetNull(const string& columnName)
+{
+    return SetNull(td->ColumnIndex(columnName));
+}
+void Record::SetNull(int columnIndex)
+{
+    values[columnIndex] = nullptr;
+}
+bool Record::IsNull(const string& columnName)
+{
+    return IsNull(td->ColumnIndex(columnName));
+}
+bool Record::IsNull(int columnIndex)
+{
+    return values[columnIndex] == nullptr;
 }
 
 void Record::Output()
@@ -273,7 +283,7 @@ void Record::Output()
     {
         ColDesc::ptr col = td->cols[i];
         cout << col->columnName << " : ";
-        if (IsNull(i))
+        if (values[i] == nullptr)
         {
             cout << "NULL";
         } else {
@@ -281,12 +291,17 @@ void Record::Output()
             {
             case INT_ENUM:
                 {
-                    cout << values[i].int_value();
+                    cout << *(int*)(values[i]->data());
+                    break;
+                }
+            case FLOAT_ENUM:
+                {
+                    cout << *(float*)(values[i]->data());
                     break;
                 }
             case CHAR_ENUM: case VARCHAR_ENUM:
                 {
-                    cout << values[i].string_value();
+                    cout << string((char*)values[i]->data(), values[i]->size());
                     break;
                 }
             default:

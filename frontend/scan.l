@@ -28,6 +28,9 @@ using namespace std;
 %option noyywrap
 %option yylineno
 
+%x line_comment
+%x block_comment
+
 NEWLINE                 (\r|\n|\r\n)
 WHITESPACE			    ([ \t]+)
 IDENTIFIER              ([A-Za-z][_0-9A-Za-z]*)
@@ -36,6 +39,14 @@ VALUE_STRING           '[^']*'
 SIMPLE_OPERATOR         (";"|"`"|"'"|"("|")"|","|"*"|".")
 
 %%
+
+"--"                    { BEGIN(line_comment);                          }
+<line_comment>[^\r\n] {}
+<line_comment>{NEWLINE} { BEGIN(INITIAL);                               }
+"/*"                    { BEGIN(block_comment);                         }
+<block_comment>[^*]     { /* ignore the text of the comment */          }
+<block_comment>"*/"     { BEGIN(INITIAL);                               }
+<block_comment>\*       { /* ignore *'s that aren't part of */          }
 
 "DATABASE"              { PRINT(DATABASE); return TOKEN(DATABASE);      }
 "DATABASES"             { PRINT(DATABASES); return TOKEN(DATABASES);    }

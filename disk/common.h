@@ -17,6 +17,7 @@ typedef shared_ptr<vector<uint8>> data_t;
 
 bool equals(data_t a, data_t b);
 data_t alloc_data(int size);
+data_t clone(data_t data);
 data_t int_data(int value);
 data_t float_data(float value);
 data_t string_data(string str);

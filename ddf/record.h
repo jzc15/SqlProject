@@ -3,12 +3,10 @@
 
 #include <vector>
 #include <memory>
-#include <json11.hpp>
 #include "tabledesc.h"
 #include "disk/common.h"
 
 using namespace std;
-using namespace json11;
 
 // 描诉一个记录
 // 注意：使用Record的时候要求td指向的TableDescription对象必须存在，不能被销毁
@@ -27,36 +25,36 @@ public:
     // 恢复
     void Recover(data_t data);
 
-    void SetNull(const string& columnName);
-    void SetNull(int columnIndex);
-    bool IsNull(const string& columnName);
-    bool IsNull(int columnIndex);
+    void SetValue(const string& columnName, data_t data);
+    void SetValue(int columnIndex, data_t data);
 
-    // int
+    data_t GetValue(const string& columnName);
+    data_t GetValue(int columnIndex);
+
     void SetInt(const string& columnName, int value);
     void SetInt(int columnIndex, int value);
     int GetInt(const string& columnName);
     int GetInt(int columnIndex);
 
-    // char
-    void SetChar(const string& columnName, char value);
-    void SetChar(int columnIndex, char value);
-    char GetChar(const string& columnName);
-    char GetChar(int columnIndex);
+    void SetFloat(const string& columnName, float value);
+    void SetFloat(int columnIndex, float value);
+    float GetFloat(const string& columnName);
+    float GetFloat(int columnIndex);
 
-    // char(10), varchar(200)
-    void SetString(const string& columnName, const char* value);
-    void SetString(int columnIndex, const char* value);
+    void SetString(const string& columnName, const string& value);
+    void SetString(int columnIndex, const string& value);
     string GetString(const string& columnName);
     string GetString(int columnIndex);
 
-    data_t GetValue(const string& columnName);
-    data_t GetValue(int columnIndex);
+    void SetNull(const string& columnName);
+    void SetNull(int columnIndex);
+    bool IsNull(const string& columnName);
+    bool IsNull(int columnIndex);
 
     void Output();
 
 private:
-    vector<Json> values; // 每列的值
+    vector<data_t> values; // 每列的值
 };
 
 #endif // _RECORD_H

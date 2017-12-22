@@ -56,15 +56,17 @@ string type_name(type_t type_enum)
     return typeName[type_enum];
 }
 
-int compare(type_t type_a, data_t data_a, type_t type_b, data_t data_b)
+int compare(type_t type, data_t data_a, data_t data_b)
 {
-    if (type_a == INT_ENUM)
+    switch(type)
     {
-        assert(type_b == INT_ENUM);
+    case INT_ENUM:
         return *(int*)(data_a->data()) - *(int*)(data_b->data());
-    } else if (type_a == CHAR_ENUM || type_a == VARCHAR_ENUM)
-    {
-        assert(type_b == CHAR_ENUM || type_b == VARCHAR_ENUM);
+        break;
+    case FLOAT_ENUM:
+        return *(float*)(data_a->data()) - *(float*)(data_b->data());
+        break;
+    case CHAR_ENUM: case VARCHAR_ENUM:
         for(int i = 0; i < (int)data_a->size() || i < (int)data_b->size(); i ++)
         {
             if (i == (int)data_b->size()) return -1;
@@ -72,14 +74,26 @@ int compare(type_t type_a, data_t data_a, type_t type_b, data_t data_b)
             if (data_a->data()[i] != data_b->data()[i]) return data_a->data()[i] - data_b->data()[i];
         }
         return 0;
-    } else if (type_a == DATE_ENUM)
-    {
-        assert(false);
-    } else if (type_a == FLOAT_ENUM)
-    {
-        assert(type_b == FLOAT_ENUM);
-        return *(float*)(data_a->data()) - *(float*)(data_b->data());
-    } else {
-        assert(false);
+        break;
+    default: assert(false);
     }
+}
+
+string stringify(type_t type, data_t data)
+{
+    data_t ans = alloc_data(data->size()+10);
+    switch(type)
+    {
+    case INT_ENUM:
+        sprintf((char*)ans->data(), "%d", *(int*)(data->data()));
+        break;
+    case FLOAT_ENUM:
+        sprintf((char*)ans->data(), "%f", *(float*)(data->data()));
+        break;
+    case CHAR_ENUM: case VARCHAR_ENUM:
+        sprintf((char*)ans->data(), "'%s'", string((char*)data->data(), data->size()).c_str());
+        break;
+    default: assert(false);
+    }
+    return string((char*)ans->data(), ans->size());
 }

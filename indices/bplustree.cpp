@@ -25,6 +25,7 @@ int BPlusTree::Iterator::Value()
 
 void BPlusTree::Iterator::Prev()
 {
+    if (End()) return;
     assert(0 <= key_pos && key_pos < node->size);
 
     if (value_pos != 0)
@@ -50,6 +51,7 @@ void BPlusTree::Iterator::Prev()
 }
 void BPlusTree::Iterator::Next()
 {
+    if (End()) return;
     assert(0 <= key_pos && key_pos < node->size);
     data_t value_list = tree->data_file->Fetch(node->children_entries[key_pos]);
     assert(0 <= value_pos && value_pos < (int)(value_list->size()/sizeof(int)));
@@ -94,6 +96,12 @@ BPlusTree::BPlusTree(const string& filename, type_t type)
 BPlusTree::~BPlusTree()
 {
 
+}
+
+void BPlusTree::RemoveIndex(const string& filename)
+{
+    if (exists(filename)) rmfile(filename);
+    if (exists(filename + ".data")) rmfile(filename + ".data");
 }
 
 void BPlusTree::Debug()
@@ -175,6 +183,20 @@ BPlusTree::Iterator BPlusTree::Begin()
     return Iterator(this, node, 0, 0);
 }
 
+BPlusTree::Iterator BPlusTree::Lower(data_t key)
+{
+    search_rst rst = SearchGE(LoadNode(header->root_page_id), key);
+    return Iterator(this, rst.node, rst.pos, 0);
+}
+
+BPlusTree::Iterator BPlusTree::Upper(data_t key)
+{
+    search_rst rst = SearchGE(LoadNode(header->root_page_id), key);
+    auto iter = Iterator(this, rst.node, rst.pos, rst.eq_count-1);
+    iter.Next();
+    return iter;
+}
+
 void BPlusTree::Init()
 {
     header = (header_t*)b_file->ReadPage(0)->data();
@@ -245,11 +267,6 @@ void BPlusTree::Debug(node_t* node)
     }
 }
 
-int BPlusTree::Compare(data_t a, data_t b)
-{
-    return compare(type, a, type, b);
-}
-
 void BPlusTree::SplitChild(node_t* node, int idx)
 {
     node_t* a = LoadNode(node->children_entries[idx]);
@@ -296,11 +313,11 @@ void BPlusTree::SplitChild(node_t* node, int idx)
 void BPlusTree::InsertNotFull(node_t* node, data_t key, int value)
 {
     int pos = 0; // 第一个>=key的位置
-    while(pos < node->size && Compare(data_file->Fetch(node->key_rids[pos]), key) < 0) pos ++;
+    while(pos < node->size && compare(type, data_file->Fetch(node->key_rids[pos]), key) < 0) pos ++;
 
     if (node->is_leaf)
     {
-        if (pos < node->size && Compare(data_file->Fetch(node->key_rids[pos]), key) == 0) // key相等
+        if (pos < node->size && compare(type, data_file->Fetch(node->key_rids[pos]), key) == 0) // key相等
         {
             data_t value_list = data_file->Fetch(node->children_entries[pos]); // 追加value
             append(value_list, value);
@@ -326,13 +343,13 @@ void BPlusTree::InsertNotFull(node_t* node, data_t key, int value)
         if (c->size == N)
         {
             SplitChild(node, pos);
-            if (Compare(key, data_file->Fetch(node->key_rids[pos])) > 0) pos ++;
+            if (compare(type, key, data_file->Fetch(node->key_rids[pos])) > 0) pos ++;
         }
         InsertNotFull(LoadNode(node->children_entries[pos]), key, value);
         node->values_count[pos] ++;
         if (pos == node->size-1)
         {
-            if (Compare(key, data_file->Fetch(node->key_rids[pos])) > 0)
+            if (compare(type, key, data_file->Fetch(node->key_rids[pos])) > 0)
             {
                 data_file->Delete(node->key_rids[pos]);
                 node->key_rids[pos] = data_file->Insert(key);
@@ -418,7 +435,7 @@ void BPlusTree::MoveChildForward(node_t* node, int idx)
 void BPlusTree::DeleteLargeEnough(node_t* node, data_t key, int value)
 {
     int pos = 0; // 第一个<=key的位置
-    while(pos < node->size && Compare(data_file->Fetch(node->key_rids[pos]), key) < 0) pos ++;
+    while(pos < node->size && compare(type, data_file->Fetch(node->key_rids[pos]), key) < 0) pos ++;
     assert(pos < node->size);
 
     if (node->is_leaf)
@@ -484,14 +501,14 @@ void BPlusTree::DeleteLargeEnough(node_t* node, data_t key, int value)
 BPlusTree::search_rst BPlusTree::SearchGE(node_t* node, data_t key, int lt_count)
 {
     int pos = 0;
-    while(pos < node->size && Compare(data_file->Fetch(node->key_rids[pos]), key) < 0) pos ++;
+    while(pos < node->size && compare(type, data_file->Fetch(node->key_rids[pos]), key) < 0) pos ++;
     for(int i = 0; i < pos; i ++) lt_count += node->values_count[i];
     if (pos >= node->size) return (search_rst){NULL, -1, lt_count, 0};
 
     if (node->is_leaf)
     {
         int eq_count = 0;
-        if (Compare(data_file->Fetch(node->key_rids[pos]), key) == 0)
+        if (compare(type, data_file->Fetch(node->key_rids[pos]), key) == 0)
             eq_count = data_file->Fetch(node->children_entries[pos])->size() / sizeof(int);
         return (search_rst){node, pos, lt_count, eq_count};
     }
@@ -502,14 +519,14 @@ BPlusTree::search_rst BPlusTree::SearchGE(node_t* node, data_t key, int lt_count
 BPlusTree::search_rst BPlusTree::SearchLE(node_t* node, data_t key, int lt_count)
 {
     int pos = node->size - 1;
-    while(pos >= 0 && Compare(data_file->Fetch(node->key_rids[pos]), key) > 0) pos --;
+    while(pos >= 0 && compare(type, data_file->Fetch(node->key_rids[pos]), key) > 0) pos --;
     for(int i = 0; i < pos; i ++) lt_count += node->values_count[i];
     if (pos < 0) return (search_rst){NULL, -1, lt_count, 0};
 
     if (node->is_leaf)
     {
         int eq_count = 0;
-        if (Compare(data_file->Fetch(node->key_rids[pos]), key) == 0)
+        if (compare(type, data_file->Fetch(node->key_rids[pos]), key) == 0)
             eq_count = data_file->Fetch(node->children_entries[pos])->size() / sizeof(int);
         return (search_rst){node, pos, lt_count, eq_count};
     }

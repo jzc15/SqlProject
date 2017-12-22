@@ -1,19 +1,20 @@
 CREATE DATABASE test_db;
 USE test_db;
-CREATE TABLE test_table (col1 INT(10), col2 INT(5), col4 VARCHAR(200));
+CREATE TABLE students (id INT(10), name VARCHAR(200), age INT(10), PRIMARY KEY(id));
+CREATE TABLE books (title VARCHAR(200), weight INT(20), FOREIGN KEY(student_id) REFERENCES students(id));
 SHOW TABLES;
-DESC test_table;
 
-INSERT INTO test_table VALUES (2, 3, '123'), (4, 5, 'abc'), (5, 2, 'qwer'), (5, 2, NULL);
-DELETE FROM test_table WHERE col1 = 2;
-DELETE FROM test_table WHERE col1 = 2;
-DELETE FROM test_table WHERE col1 > col2;
-DELETE FROM test_table WHERE col1 < col2;
+INSERT INTO students VALUES (0, 'Alice', 10), (1, 'Bob', 11), (3, 'King', 100), (7, 'King', 100), (2, 'King', 100), (100, 'King', 100);
+INSERT INTO students VALUES (110, 'Alice', 10), (111, 'Bob', 11), (113, 'King', 100), (17, 'King', 100), (21, 'King', 100), (10, 'King', 100);
+-- INSERT INTO students VALUES (0, 'KKK', 100);
 
-INSERT INTO test_table VALUES (1, 3, '123'), (1, 5, 'abc'), (2, 2, 'qwer'), (2, 7, NULL);
-UPDATE test_table SET col2 = 4 WHERE col1 = 1;
-UPDATE test_table SET col4 = '45663' WHERE col4 IS NULL;
-SELECT * FROM test_table WHERE col1 = 2;
-UPDATE test_table SET col1 = 2 WHERE col1 = 1;
-UPDATE test_table SET col4 = NULL WHERE col2 = 7;
-SELECT * FROM test_table WHERE col1 = 2;
+INSERT INTO books VALUES ('Book Name', 20, 0);
+INSERT INTO books VALUES ('Book Name', 20, 1);
+
+-- DELETE FROM students WHERE id < 100 AND name = 'Bob';
+
+UPDATE students SET age = 20 WHERE id = 0 AND name = 'Bob';
+-- UPDATE students SET age = 'kkk' WHERE id = 0 AND name = 'Bob';
+
+SELECT * FROM students WHERE id = 0;
+SELECT * FROM students, books WHERE books.student_id = students.id AND students.name = 'Bob';

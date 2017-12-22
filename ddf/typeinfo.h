@@ -37,6 +37,8 @@ type_t type_enum(const string& typeName);
 string type_name(type_t type_enum);
 
 // return a - b;
-int compare(type_t type_a, data_t data_a, type_t type_b, data_t data_b);
+int compare(type_t type, data_t data_a, data_t data_b);
+
+string stringify(type_t type, data_t data);
 
 #endif // _TYPE_INFO_H

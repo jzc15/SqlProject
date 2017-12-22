@@ -4,6 +4,10 @@
 
 #include "context.h"
 #include <disk/common.h>
+#include <cstdio>
+#include <cassert>
+
+using namespace std;
 
 // 值
 class Value
@@ -16,6 +20,23 @@ public:
     static Value int_value(int value) { Value ans; ans.value_type = VALUE_INT; ans.data = int_data(value); return ans; }
     static Value string_value(const string& value) { Value ans; ans.value_type = VALUE_STRING; ans.data = string_data(value); return ans; }
     static Value null_value() { Value ans; ans.value_type = VALUE_NULL; ans.data = nullptr; return ans; }
+
+    string stringify() const
+    {
+        char buf[1024];
+        switch(value_type)
+        {
+        case VALUE_INT:
+            sprintf(buf, "%d", *(int*)(data->data()));
+            break;
+        case VALUE_STRING:
+            sprintf(buf, "'%s'", string((char*)data->data(), data->size()).c_str());
+            break;
+        case VALUE_NULL:
+            return "NULL";
+        }
+        return buf;
+    }
 };
 // 列
 class Column
@@ -52,6 +73,24 @@ public:
     static Condition expr_condition(const Column& column, OP op, const Expr& expr) { Condition ans; ans.column = column; ans.op = op; ans.expr = expr; return ans; }
     static Condition is_null_condition(const Column& column) { Condition ans; ans.column = column; ans.op = OP_IS_NULL; return ans; }
     static Condition not_null_condition(const Column& column) { Condition ans; ans.column = column; ans.op = OP_NOT_NULL; return ans; }
+
+    void reverse_op()
+    {
+        switch(op)
+        {
+        case OP_EQ: case OP_NEQ: break;
+        case OP_LE: op = OP_GE; break;
+        case OP_LT: op = OP_GT; break;
+        case OP_GE: op = OP_LE; break;
+        case OP_GT: op = OP_LT; break;
+        case OP_IS_NULL: case OP_NOT_NULL: assert(false);
+        }
+    }
+
+    bool is_binary_operator() const
+    {
+        return op != OP_IS_NULL && op != OP_NOT_NULL;
+    }
 };
 // 设值
 class Assignment
@@ -77,6 +116,6 @@ public:
 void insert_op(Context* ctx, const string& tb_name, const vector<vector<Value> >& values_list);
 void delete_op(Context* ctx, const string& tb_name, const vector<Condition>& conditions);
 void update_op(Context* ctx, const string& tb_name, const vector<Assignment>& assignments, const vector<Condition>& conditions);
-void select_op(Context* ctx, const Selector& selector, const vector<string>& tables, const vector<Condition>& conditions);
+void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Condition> conditions);
 
 #endif // ENGINE_CRUD_OP_H

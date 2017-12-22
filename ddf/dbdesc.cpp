@@ -25,7 +25,7 @@ DBDesc::DBDesc(const string& databaseName, const string& storagePath)
 
     for(auto iter: info.object_items())
     {
-        tables[iter.first] = make_shared<TableDesc>(databaseName, iter.first, storagePath, iter.second);
+        tables[iter.first] = make_shared<TableDesc>(this, iter.first, storagePath, iter.second);
     }
 }
 
@@ -37,7 +37,7 @@ DBDesc::~DBDesc()
 TableDesc::ptr DBDesc::CreateTable(const string& tableName)
 {
     assert(tables.find(tableName) == tables.end());
-    auto ptr = tables[tableName] = make_shared<TableDesc>(databaseName, tableName, storagePath);
+    auto ptr = tables[tableName] = make_shared<TableDesc>(this, tableName, storagePath);
     return ptr;
 }
 

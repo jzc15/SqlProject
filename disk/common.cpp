@@ -29,6 +29,14 @@ data_t alloc_data(int size)
     return data;
 }
 
+data_t clone(data_t data)
+{
+    if (data == nullptr) return nullptr;
+    data_t d = alloc_data(data->size());
+    memcpy(d->data(), data->data(), data->size());
+    return d;
+}
+
 data_t int_data(int value)
 {
     data_t data = alloc_data(sizeof(int));
