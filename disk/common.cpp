@@ -58,6 +58,13 @@ data_t string_data(string str)
     return data;
 }
 
+data_t time_data(time_t value)
+{
+    data_t data = alloc_data(sizeof(time_t));
+    *(time_t*)(data->data()) = value;
+    return data;
+}
+
 void mkdirp(const string& path)
 {
     char buf[1024];
@@ -83,6 +90,13 @@ void rmfile(const string& filepath)
 {
     char buf[1024];
     sprintf(buf, "rm '%s'", filepath.c_str());
+    assert(system(buf) == 0);
+}
+
+void cpfile(const string& src, const string& dst)
+{
+    char buf[1024];
+    sprintf(buf, "cp '%s' '%s'", src.c_str(), dst.c_str());
     assert(system(buf) == 0);
 }
 

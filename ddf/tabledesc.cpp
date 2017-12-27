@@ -1,4 +1,5 @@
 #include "tabledesc.h"
+#include "dbdesc.h"
 #include "record.h"
 #include <disk/common.h>
 #include <cassert>
@@ -53,10 +54,27 @@ void TableDesc::Finalize()
 
         if (col->fixed) fixed_data_size += col->size;
     }
-    primary_key_idx = -1;
+    primary_idxs = alloc_data(0);
+    primary_size = 0;
     for(int i = 0; i < (int)cols.size(); i ++)
-        if (cols[i]->is_primary)
-            primary_key_idx = i;
+        if (cols[i]->is_oneof_primary)
+        {
+            primary_idxs->push_back(i);
+            primary_size += cols[i]->size;
+        }
+    for(int i = 0; i < (int)cols.size(); i ++)
+    {
+        cols[i]->is_only_primary = false;
+        cols[i]->has_multi_primary_hash = false;
+    }
+    if (primary_idxs->size() == 1u)
+    {
+        cols[primary_idxs->at(0)]->is_only_primary = true;
+    } else {
+        for(int i = 0; i < (int)cols.size(); i ++)
+            if (cols[i]->is_oneof_primary)
+                cols[i]->has_multi_primary_hash = true;
+    }
 }
 
 Record::ptr TableDesc::NewRecord()
@@ -98,11 +116,6 @@ size_t TableDesc::FixedDataSize()
     return fixed_data_size;
 }
 
-int TableDesc::PrimaryKeyIdx()
-{
-    return primary_key_idx;
-}
-
 ColDesc::ptr TableDesc::Column(const string& columnName)
 {
     assert(columnPtr.find(columnName) != columnPtr.end());
@@ -118,6 +131,21 @@ ColDesc::ptr TableDesc::Column(int index)
 bool TableDesc::IsColumnExists(const string& columnName)
 {
     return columnPtr.find(columnName) != columnPtr.end();
+}
+
+string TableDesc::PrimaryFilename()
+{
+    return path_join(dd->storagePath, tableName + ".primary");
+}
+
+int TableDesc::PrimarySize()
+{
+    return primary_size;
+}
+
+data_t TableDesc::PrimaryIdxs()
+{
+    return primary_idxs;
 }
 
 Json TableDesc::Dump()

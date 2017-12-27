@@ -9,12 +9,14 @@
 
 using namespace std;
 
-void insert_op(Context* ctx, const string& tb_name, const vector<vector<Value> >& values_list)
+void insert_op(Context* ctx, const string& tb_name, vector<vector<Value> > values_list)
 {
+    TITLE(insert_op)
+
     auto td = ctx->dd->SearchTable(tb_name);
     SlotsFile::ptr table_file = make_shared<SlotsFile>(td->disk_filename);
 
-    for(const auto& values : values_list)
+    for(auto& values : values_list)
     {
         Record::ptr record = td->NewRecord();
         if (values.size() != td->cols.size())
@@ -26,8 +28,8 @@ void insert_op(Context* ctx, const string& tb_name, const vector<vector<Value> >
         for(int i = 0; i < (int)values.size(); i ++)
         {
             auto cd = td->Column(i);
-            Value v = values[i];
-            if (!value_type_check_ok(cd->typeEnum, v.value_type))
+            Value& v = values[i];
+            if (!value_type_trans_ok(cd->typeEnum, v))
             {
                 cerr << "ERROR AT INSERT : wrong type for column `" << cd->columnName << "` : " << v.stringify() << endl;
                 return;
@@ -43,11 +45,11 @@ void insert_op(Context* ctx, const string& tb_name, const vector<vector<Value> >
         insert_record_to_indices(record, rid);
     }
 }
-void delete_op(Context* ctx, const string& tb_name, const vector<Condition>& conditions)
+void delete_op(Context* ctx, const string& tb_name, vector<Condition> conditions)
 {
     TITLE(delete_op);
     auto td = ctx->dd->SearchTable(tb_name);
-    for(const auto& cond : conditions)
+    for(auto& cond : conditions)
     {
         if (cond.is_binary_operator())
         {
@@ -57,7 +59,7 @@ void delete_op(Context* ctx, const string& tb_name, const vector<Condition>& con
                 cerr << "ERROR AT DELETE : wrong type between column `" << cd_a->columnName << "` and column `" <<  td->Column(cond.expr.column.col_name)->columnName << "`" << endl;
                 return;
             }
-            if (cond.expr.expr_type == Expr::EXPR_VALUE && !value_type_check_ok(cd_a->typeEnum, cond.expr.value.value_type))
+            if (cond.expr.expr_type == Expr::EXPR_VALUE && !value_type_trans_ok(cd_a->typeEnum, cond.expr.value))
             {
                 cerr << "ERROR AT DELETE : wrong type for column `" << cd_a->columnName << "` : " << cond.expr.value.stringify() << endl;
                 return;
@@ -75,11 +77,11 @@ void delete_op(Context* ctx, const string& tb_name, const vector<Condition>& con
     }
     cout << "deleted count : " << rids.size() << endl;
 }
-void update_op(Context* ctx, const string& tb_name, const vector<Assignment>& assignments, const vector<Condition>& conditions)
+void update_op(Context* ctx, const string& tb_name, vector<Assignment> assignments, vector<Condition> conditions)
 {
     TITLE(update_op);
     auto td = ctx->dd->SearchTable(tb_name);
-    for(const auto& cond : conditions)
+    for(auto& cond : conditions)
     {
         if (cond.is_binary_operator())
         {
@@ -89,17 +91,17 @@ void update_op(Context* ctx, const string& tb_name, const vector<Assignment>& as
                 cerr << "ERROR AT UPDATE CONDITION : wrong type between column `" << cd_a->columnName << "` and column `" <<  td->Column(cond.expr.column.col_name)->columnName << "`" << endl;
                 return;
             }
-            if (cond.expr.expr_type == Expr::EXPR_VALUE && !value_type_check_ok(cd_a->typeEnum, cond.expr.value.value_type))
+            if (cond.expr.expr_type == Expr::EXPR_VALUE && !value_type_trans_ok(cd_a->typeEnum, cond.expr.value))
             {
                 cerr << "ERROR AT UPDATE CONDITION : wrong type for column `" << cd_a->columnName << "` : " << cond.expr.value.stringify() << endl;
                 return;
             }
         }
     }
-    for(const auto& assign: assignments)
+    for(auto& assign: assignments)
     {
         auto cd = td->Column(assign.column);
-        if (!value_type_check_ok(cd->typeEnum, assign.value.value_type))
+        if (!value_type_trans_ok(cd->typeEnum, assign.value))
         {
             cerr << "ERROR AT UPDATE SET : wrong type for column `" << cd->columnName << "` : " << assign.value.stringify() << endl;
             return;
@@ -108,17 +110,24 @@ void update_op(Context* ctx, const string& tb_name, const vector<Assignment>& as
 
     vector<int> rids = list_conditions_rids(td, conditions);
     SlotsFile::ptr file = make_shared<SlotsFile>(td->disk_filename);
-    for(auto rid : rids)
+    for(const auto rid : rids)
     {
-        Record::ptr record = td->RecoverRecord(file->Fetch(rid));
-        file->Delete(rid);
-        remove_record_from_indices(record, rid);
+        Record::ptr old_record = td->RecoverRecord(file->Fetch(rid));
+        Record::ptr new_record = Record::Clone(old_record);
         for(const auto& assign : assignments)
         {
-            record->SetValue(assign.column, assign.value.data);
+            new_record->SetValue(assign.column, assign.value.data);
         }
-        int nrid = file->Insert(record->Generate());
-        insert_record_to_indices(record, nrid);
+        if (record_check_ok(new_record, rid))
+        {
+            file->Delete(rid);
+            remove_record_from_indices(old_record, rid);
+            int nrid = file->Insert(new_record->Generate());
+            insert_record_to_indices(new_record, nrid);
+        } else {
+            cerr << "ERROR AT INSERT : wrong record" << endl;
+            return;
+        }
     }
     cout << "updated count : " << rids.size() << endl;
 }
@@ -148,11 +157,11 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
         for(auto& ccolumn : selector.columns)
         {
             solve_column_tb_name(ctx, tables, ccolumn);
-        }   
+        }
     }
 
     // type check
-    for(const auto& cond : conditions)
+    for(auto& cond : conditions)
     {
         if (cond.is_binary_operator())
         {
@@ -162,7 +171,7 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
                 cerr << "ERROR AT UPDATE CONDITION : wrong type between column `" << cd_a->columnName << "` and column `" <<  ctx->dd->SearchTable(cond.expr.column.tb_name)->Column(cond.expr.column.col_name)->columnName << "`" << endl;
                 return;
             }
-            if (cond.expr.expr_type == Expr::EXPR_VALUE && !value_type_check_ok(cd_a->typeEnum, cond.expr.value.value_type))
+            if (cond.expr.expr_type == Expr::EXPR_VALUE && !value_type_trans_ok(cd_a->typeEnum, cond.expr.value))
             {
                 cerr << "ERROR AT UPDATE CONDITION : wrong type for column `" << cd_a->columnName << "` : " << cond.expr.value.stringify() << endl;
                 return;
@@ -170,50 +179,88 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
         }
     }
 
-    // topsort tables
-    TopSort<string> top_sort;
-    for(const auto& tb : tables)
+    // sort tables
     {
-        top_sort.TouchNode(tb);
-    }
-    for(const auto& cond : conditions)
-    {
-        if (cond.is_binary_operator() && cond.expr.expr_type == Expr::EXPR_COLUMN && cond.op == Condition::OP_EQ)
+        set<string> in_tables;
+        vector<string> new_tables;
+
+        // 主键优化
+        for(const auto& cond : conditions)
         {
-            const Column& a = cond.column;
-            const Column& b = cond.expr.column;
-            if (a.tb_name != b.tb_name)
+            if (in_tables.find(cond.column.tb_name) != in_tables.end()) continue;
+            if (cond.is_binary_operator()
+                && cond.expr.expr_type == Expr::EXPR_VALUE && cond.op == Condition::OP_EQ
+                && ctx->dd->SearchTable(cond.column.tb_name)->Column(cond.column.col_name)->is_only_primary) {
+                    in_tables.insert(cond.column.tb_name);
+                    new_tables.push_back(cond.column.tb_name);
+                }
+        }
+
+        // 主键成员优化
+        for(const auto& cond : conditions)
+        {
+            if (in_tables.find(cond.column.tb_name) != in_tables.end()) continue;
+            if (cond.is_binary_operator()
+                && cond.expr.expr_type == Expr::EXPR_VALUE && cond.op == Condition::OP_EQ
+                && ctx->dd->SearchTable(cond.column.tb_name)->Column(cond.column.col_name)->is_oneof_primary) {
+                    in_tables.insert(cond.column.tb_name);
+                    new_tables.push_back(cond.column.tb_name);
+                }
+        }
+
+        TopSort<string> top_sort;
+        for(const auto& tb : tables)
+        {
+            if (in_tables.find(tb) != in_tables.end()) continue;
+            top_sort.TouchNode(tb);
+        }
+        for(const auto& cond : conditions)
+        {
+            if (cond.is_binary_operator() && cond.expr.expr_type == Expr::EXPR_COLUMN && cond.op == Condition::OP_EQ)
             {
-                auto td_a = ctx->dd->SearchTable(a.tb_name);
-                auto td_b = ctx->dd->SearchTable(b.tb_name);
-                auto cd_a = td_a->Column(a.col_name);
-                auto cd_b = td_b->Column(b.col_name);
-                if (cd_a->is_primary)
+                const Column& a = cond.column;
+                const Column& b = cond.expr.column;
+                if (in_tables.find(a.tb_name) != in_tables.end()) continue;
+                if (in_tables.find(b.tb_name) != in_tables.end()) continue;
+                if (a.tb_name != b.tb_name)
                 {
-                    top_sort.Build(b.tb_name, a.tb_name);
-                } else if (cd_b->is_primary)
-                {
-                    top_sort.Build(a.tb_name, b.tb_name);
+                    auto td_a = ctx->dd->SearchTable(a.tb_name);
+                    auto td_b = ctx->dd->SearchTable(b.tb_name);
+                    auto cd_a = td_a->Column(a.col_name);
+                    auto cd_b = td_b->Column(b.col_name);
+                    if (cd_a->is_oneof_primary)
+                    {
+                        top_sort.Build(b.tb_name, a.tb_name);
+                    } else if (cd_b->is_oneof_primary)
+                    {
+                        top_sort.Build(a.tb_name, b.tb_name);
+                    }
                 }
             }
         }
-    }
-    auto top_que = top_sort.Sort();
-    assert(top_que != nullptr);
-    tables = *top_que.get();
-    cout << "table list : ";
-    for(const auto& tb : tables)
-    {
-        cout << tb << " ";
-    }
-    cout << endl;
+        auto top_que = top_sort.Sort();
+        assert(top_que != nullptr);
+        for(const auto& tb : *top_que.get())
+        {
+            new_tables.push_back(tb);
+        }
 
-    // select
+        tables = new_tables;
+        cout << "table list : ";
+        for(const auto& tb : tables)
+        {
+            cout << tb << " ";
+        }
+        cout << endl;
+    }
     map<string, int> tables_idx;
     for(int i = 0; i < (int)tables.size(); i ++) tables_idx[tables[i]] = i;
+
+    // select
     vector<vector<int>> table_records(tables.size());
-    vector<TableDesc::ptr> tds(tables.size()); // 是否被前面的表所引用
-    vector<int> be_refed_tb_idx(tables.size(), -1), be_refed_col_idx(tables.size(), -1);
+    vector<TableDesc::ptr> tds(tables.size());
+    // 是否被前面的表所引用
+    vector<int> be_refed_tb_idx(tables.size(), -1), be_refed_col_idx(tables.size(), -1), be_refed_me_col_idx(tables.size(), -1);
     for(int i = 0; i < (int)tables.size(); i ++) tds[i] = ctx->dd->SearchTable(tables[i]);
     // 对于跨越两个表的条件，交换为前面和后面的比较
     for(auto& cond : conditions)
@@ -238,10 +285,11 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
             {
                 const Column& a = cond.column;
                 const Column& b = cond.expr.column;
-                if (b.tb_name == tables[i] && tds[i]->Column(b.col_name)->is_primary && tables_idx[a.tb_name] < i)
+                if (b.tb_name == tables[i] && tds[i]->Column(b.col_name)->is_oneof_primary && tables_idx[a.tb_name] < i)
                 {
                     be_refed_tb_idx[i] = tables_idx[a.tb_name];
                     be_refed_col_idx[i] = tds[tables_idx[a.tb_name]]->ColumnIndex(a.col_name);
+                    be_refed_me_col_idx[i] = tds[i]->ColumnIndex(b.col_name);
                     break;
                 }
             }
@@ -260,9 +308,10 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
                 }
             }
             table_records[i] = list_conditions_rids(tds[i], this_conds);
-            cout << "plain records : " << tables[i] << " conds size = " << this_conds.size() << " records size = " << table_records.size() << endl;
+            cout << "plain records : " << tables[i] << " conds size = " << this_conds.size() << " records size = " << table_records[i].size() << endl;
         }
     
+    // prepare output titles
     vector<string> output_titles;
     vector<int> output_record_idx;
     vector<int> output_record_col_idx;
@@ -301,8 +350,9 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
     }
     cout << endl;
 
-    vector<Record::ptr> current_records(tables.size());
-    vector<SlotsFile::ptr> files(tables.size());
+    // search records pairs
+    vector<Record::ptr> current_records(tables.size()); // 当前每个表的记录
+    vector<SlotsFile::ptr> files(tables.size()); // 每个表的磁盘文件
     for(int i = 0; i < (int)tables.size(); i ++) files[i] = make_shared<SlotsFile>(tds[i]->disk_filename);
     int selected_count = 0;
     std::function<void(int)> select;
@@ -321,28 +371,31 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
         }
         if (be_refed_tb_idx[table_idx] != -1) // 被引用
         {
-            data_t primary_key = current_records[be_refed_tb_idx[table_idx]]->GetValue(be_refed_col_idx[table_idx]);
-            if (primary_key == nullptr) return;
-            int rid = search_in_primary(tds[table_idx], primary_key);
-            if (rid == -1) return;
-            Record::ptr record = current_records[table_idx] = tds[table_idx]->RecoverRecord(files[table_idx]->Fetch(rid));
-            bool flag = true;
-            for(const auto& cond: conditions)
+            data_t refed_key = current_records[be_refed_tb_idx[table_idx]]->GetValue(be_refed_col_idx[table_idx]);
+            if (refed_key == nullptr) return;
+
+            vector<int> this_rids = search_in_oneof_primary(tds[table_idx]->Column(be_refed_me_col_idx[table_idx]), refed_key);
+            for(int rid : this_rids)
             {
-                const Column& c = cond.column;
-                if (c.tb_name == tables[table_idx])
+                Record::ptr record = current_records[table_idx] = tds[table_idx]->RecoverRecord(files[table_idx]->Fetch(rid));
+                bool flag = true;
+                for(const auto& cond: conditions)
                 {
-                    if(!cond.is_binary_operator() || cond.expr.expr_type != Expr::EXPR_COLUMN || cond.expr.column.tb_name == tables[table_idx])
+                    const Column& c = cond.column;
+                    if (c.tb_name == tables[table_idx])
                     {
-                        flag &= test_condition(record, cond);
+                        if(!cond.is_binary_operator() || cond.expr.expr_type != Expr::EXPR_COLUMN || cond.expr.column.tb_name == tables[table_idx])
+                        {
+                            flag &= test_condition(record, cond);
+                        }
+                    } else if (cond.is_binary_operator() && cond.expr.expr_type == Expr::EXPR_COLUMN && cond.expr.column.tb_name == tables[table_idx]) {
+                        flag &= test_condition(current_records[tables_idx[cond.column.tb_name]], record, cond);
                     }
-                } else if (cond.is_binary_operator() && cond.expr.expr_type == Expr::EXPR_COLUMN && cond.expr.column.tb_name == tables[table_idx]) {
-                    flag &= test_condition(current_records[tables_idx[cond.column.tb_name]], record, cond);
+                    if (!flag) break;
                 }
-                if (!flag) break;
+                if (!flag) continue;
+                select(table_idx + 1);
             }
-            if (!flag) return;
-            select(table_idx + 1);
         } else {
             for(auto rid : table_records[table_idx])
             {

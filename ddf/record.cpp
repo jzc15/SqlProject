@@ -7,6 +7,16 @@
 
 using namespace std;
 
+Record::ptr Record::Clone(Record::ptr record)
+{
+    Record::ptr p = make_shared<Record>(record->td);
+    for(int i = 0; i < (int)record->values.size(); i ++)
+    {
+        p->values[i] = clone(record->values[i]);
+    }
+    return p;
+}
+
 Record::Record(TableDesc* td)
     : td(td)
 {
@@ -65,6 +75,9 @@ data_t Record::Generate()
                         {
                             memcpy(ptr+offset, values[i]->data(), values[i]->size());
                         }
+                        break;
+                    case DATE_ENUM:
+                        *(time_t*)(ptr+offset) = *(time_t*)(values[i]->data());
                         break;
                     default:
                         assert(false);
@@ -138,6 +151,9 @@ void Record::Recover(data_t data)
                 case CHAR_ENUM:
                     values[i] = string_data(string((char*)(ptr+offset), col->length));
                     break;
+                case DATE_ENUM:
+                    values[i] = time_data(*(time_t*)(ptr+offset));
+                    break;
                 default: assert(false); break;
             }
             offset += col->size;
@@ -172,6 +188,19 @@ void Record::Recover(data_t data)
     assert(offset == size);
 }
 
+data_t Record::PrimaryKey()
+{
+    data_t idxs = td->PrimaryIdxs();
+    data_t key = alloc_data(0);
+    for(int i = 0; i < (int)idxs->size(); i ++)
+    {
+        data_t value = values[idxs->at(i)];
+        for(int j = 0; j < (int)value->size(); j ++)
+            key->push_back(value->at(j));
+    }
+    return key;
+}
+
 void Record::SetValue(const string& columnName, data_t data)
 {
     SetValue(td->ColumnIndex(columnName), data);
@@ -194,6 +223,9 @@ void Record::SetValue(int columnIndex, data_t data)
         break;
     case VARCHAR_ENUM:
         data->resize(min(data->size(), col->length));
+        break;
+    case DATE_ENUM:
+        assert(data->size() == sizeof(time_t));
         break;
     default:
         assert(false);

@@ -2,6 +2,8 @@
 #include <disk/common.h>
 #include <datamanager/slotsfile.h>
 #include <indices/bplustree.h>
+#include <indices/hashtable.h>
+#include <indices/multihashtable.h>
 #include <iostream>
 #include <cassert>
 
@@ -18,39 +20,63 @@ bool record_check_ok(Record::ptr record, int rid)
             cerr << "column `" << c->columnName << "` not allow null" << endl;
             return false;
         }
-        if (c->is_primary) // 主键唯一
-        {
-            BPlusTree::ptr indices = make_shared<BPlusTree>(c->PrimaryFilename(), c->typeEnum);
-            if (indices->EQCount(record->GetValue(i)) > 0)
-            {
-                cerr << "primary column `" << c->columnName << "` value exists : " << stringify(c->typeEnum, record->GetValue(i)) << endl;
-                return false;
-            }
-        }
         if (c->is_foreign_key) // 外键存在
         {
             auto foreign_td = record->td->dd->SearchTable(c->foreign_tb_name);
             auto foreign_cd = foreign_td->Column(c->foreign_col_name);
-            BPlusTree::ptr indices = make_shared<BPlusTree>(foreign_cd->PrimaryFilename(), foreign_cd->typeEnum);
-            if (indices->EQCount(record->GetValue(i)) == 0)
+            HashTable::ptr indices = make_shared<HashTable>(foreign_td->PrimaryFilename(), foreign_td->PrimarySize());
+            if (!indices->Exists(record->GetValue(i)))
             {
                 cerr << "foreign column `" << c->columnName << "` for `" << c->foreign_tb_name << "." << c->foreign_col_name << "` key not exists : " << stringify(c->typeEnum, record->GetValue(i)) << endl;
                 return false;
             }
         }
     }
+    if (record->td->PrimaryIdxs()->size() > 0u) // 主键唯一
+    {
+        HashTable::ptr indices = make_shared<HashTable>(record->td->PrimaryFilename(), record->td->PrimarySize());
+        if (indices->Exists(record->PrimaryKey()) && indices->Fetch(record->PrimaryKey()) != rid)
+        {
+            cerr << "primary key exists : ";
+            for(int i = 0; i < (int)record->td->PrimaryIdxs()->size(); i ++)
+            {
+                cout << stringify(record->td->Column(record->td->PrimaryIdxs()->at(i))->typeEnum, record->GetValue(i)) << " ";
+            }
+            cout << endl;
+            return false;
+        }
+    }
     return true;
 }
 // 类型检查
-bool value_type_check_ok(type_t type, Value::ValueType value_type)
+bool value_type_trans_ok(type_t type, Value& value)
 {
-    if (value_type == Value::VALUE_NULL) return true;
+    if (value.value_type == Value::VALUE_NULL) return true;
     switch(type)
     {
     case INT_ENUM:
-        return value_type == Value::VALUE_INT;
+        return value.value_type == Value::VALUE_INT;
     case CHAR_ENUM: case VARCHAR_ENUM:
-        return value_type == Value::VALUE_STRING;
+        return value.value_type == Value::VALUE_STRING;
+    case DATE_ENUM:
+        if (value.value_type == Value::VALUE_STRING)
+        {
+            value.string_to_date();
+            return true;
+        } else {
+            return false;
+        }
+    case FLOAT_ENUM:
+        if (value.value_type == Value::VALUE_FLOAT)
+        {
+            return true;
+        } else if (value.value_type == Value::VALUE_INT)
+        {
+            value.int_to_float();
+            return true;
+        } else {
+            return false;
+        }
     default:
         assert(false);
     }
@@ -66,11 +92,16 @@ void remove_record_from_indices(Record::ptr record, int rid)
             BPlusTree::ptr indices = make_shared<BPlusTree>(c->IndexFilename(), c->typeEnum);
             indices->Delete(record->GetValue(i), rid);
         }
-        if (c->is_primary && !record->IsNull(i)) // 主键
+        if (c->has_multi_primary_hash)
         {
-            BPlusTree::ptr indices = make_shared<BPlusTree>(c->PrimaryFilename(), c->typeEnum);
+            MultiHashTable::ptr indices = make_shared<MultiHashTable>(c->MultiPrimaryFilename(), c->size);
             indices->Delete(record->GetValue(i), rid);
         }
+    }
+    if (record->td->PrimaryIdxs()->size() > 0u) // 主键
+    {
+        HashTable::ptr indices = make_shared<HashTable>(record->td->PrimaryFilename(), record->td->PrimarySize());
+        indices->Delete(record->PrimaryKey());
     }
 }
 // 在索引中添加记录
@@ -84,11 +115,16 @@ void insert_record_to_indices(Record::ptr record, int rid)
             BPlusTree::ptr indices = make_shared<BPlusTree>(c->IndexFilename(), c->typeEnum);
             indices->Insert(record->GetValue(i), rid);
         }
-        if (c->is_primary && !record->IsNull(i)) // 主键
+        if (c->has_multi_primary_hash)
         {
-            BPlusTree::ptr indices = make_shared<BPlusTree>(c->PrimaryFilename(), c->typeEnum);
+            MultiHashTable::ptr indices = make_shared<MultiHashTable>(c->MultiPrimaryFilename(), c->size);
             indices->Insert(record->GetValue(i), rid);
         }
+    }
+    if (record->td->PrimaryIdxs()->size() > 0u) // 主键
+    {
+        HashTable::ptr indices = make_shared<HashTable>(record->td->PrimaryFilename(), record->td->PrimarySize());
+        indices->Insert(record->PrimaryKey(), rid);
     }
 }
 
@@ -177,49 +213,50 @@ int calculate_condition_count(TableDesc::ptr td, const Condition& cond)
 {
     ColDesc::ptr cd = td->Column(cond.column.col_name);
 
-    string indices_filename;
-    if (cd->indexed) indices_filename = cd->IndexFilename();
-    if (cd->is_primary) indices_filename = cd->PrimaryFilename();
+    BPlusTree::ptr column_indices = nullptr;
+    HashTable::ptr primary_hash = nullptr;
+    MultiHashTable::ptr multi_primary_hash = nullptr;
 
-    if (cd->indexed || cd->is_primary)
+    if (cd->indexed)
     {
-        if (cond.expr.expr_type == Expr::EXPR_VALUE)
+        column_indices = make_shared<BPlusTree>(cd->IndexFilename(), cd->typeEnum);
+    }
+    if (cd->is_only_primary)
+    {
+        primary_hash = make_shared<HashTable>(td->PrimaryFilename(), td->PrimarySize());
+    }
+    if (cd->has_multi_primary_hash)
+    {
+        multi_primary_hash = make_shared<MultiHashTable>(cd->MultiPrimaryFilename(), cd->size);
+    }
+    
+    if (cond.expr.expr_type == Expr::EXPR_VALUE)
+    {
+        auto key = cond.expr.value.data;
+        if (cond.op == Condition::OP_EQ)
         {
-            if (
-                cond.op == Condition::OP_EQ ||
-                cond.op == Condition::OP_NEQ ||
-                cond.op == Condition::OP_LT ||
-                cond.op == Condition::OP_GT ||
-                cond.op == Condition::OP_LE ||
-                cond.op == Condition::OP_GE)
-            {
-                BPlusTree::ptr indices = make_shared<BPlusTree>(indices_filename, cd->typeEnum);
-                data_t key = cond.expr.value.data;
-                int count = 0;
-                switch(cond.op)
-                {
-                case Condition::OP_EQ:
-                    count = indices->EQCount(key);
-                    break;
-                case Condition::OP_NEQ:
-                    count = indices->TotalCount() - indices->EQCount(key);
-                    break;
-                case Condition::OP_LT:
-                    count = indices->LTCount(key);
-                    break;
-                case Condition::OP_GT:
-                    count = indices->TotalCount() - indices->LECount(key);
-                    break;
-                case Condition::OP_LE:
-                    count = indices->LECount(key);
-                    break;
-                case Condition::OP_GE:
-                    count = indices->TotalCount() - indices->LTCount(key);
-                    break;
-                default: assert(false);
-                }
-                return count;
-            }
+            if (cd->is_only_primary) return primary_hash->Exists(key);
+            if (cd->has_multi_primary_hash) return multi_primary_hash->Count(key);
+            if (cd->indexed) return column_indices->EQCount(key);
+        } else if (cond.op == Condition::OP_NEQ)
+        {
+            if (cd->is_only_primary) return primary_hash->TotalRecords() - primary_hash->Exists(key);
+            if (cd->has_multi_primary_hash) return multi_primary_hash->TotalRecords() - multi_primary_hash->Count(key);
+            if (cd->indexed) return column_indices->TotalCount() - column_indices->EQCount(key);
+        } else if (cond.op == Condition::OP_LT)
+        {
+            if (cd->indexed) return column_indices->LTCount(key);
+        } else if (cond.op == Condition::OP_GT)
+        {
+            if (cd->indexed) return column_indices->TotalCount() - column_indices->LECount(key);
+        } else if (cond.op == Condition::OP_LE)
+        {
+            if (cd->indexed) return column_indices->LECount(key);
+        } else if (cond.op == Condition::OP_GE)
+        {
+            if (cd->indexed) return column_indices->TotalCount() - column_indices->LTCount(key);
+        } else {
+            assert(false);
         }
     }
 
@@ -230,97 +267,123 @@ vector<int> list_condition_rids(TableDesc::ptr td, const Condition& cond)
 {
     ColDesc::ptr cd = td->Column(cond.column.col_name);
 
-    string indices_filename;
-    if (cd->indexed) indices_filename = cd->IndexFilename();
-    if (cd->is_primary) indices_filename = cd->PrimaryFilename();
+    BPlusTree::ptr column_indices = nullptr;
+    HashTable::ptr primary_hash = nullptr;
+    MultiHashTable::ptr multi_primary_hash = nullptr;
 
-    if (cd->indexed || cd->is_primary)
+    if (cd->indexed)
     {
-        if (cond.expr.expr_type == Expr::EXPR_VALUE)
+        column_indices = make_shared<BPlusTree>(cd->IndexFilename(), cd->typeEnum);
+    }
+    if (cd->is_only_primary)
+    {
+        primary_hash = make_shared<HashTable>(td->PrimaryFilename(), td->PrimarySize());
+    }
+    if (cd->has_multi_primary_hash)
+    {
+        multi_primary_hash = make_shared<MultiHashTable>(cd->MultiPrimaryFilename(), cd->size);
+    }
+
+    if (cond.expr.expr_type == Expr::EXPR_VALUE)
+    {
+        auto key = cond.expr.value.data;
+        if (cond.op == Condition::OP_EQ)
         {
-            if (
-                cond.op == Condition::OP_EQ ||
-                cond.op == Condition::OP_NEQ ||
-                cond.op == Condition::OP_LT ||
-                cond.op == Condition::OP_GT ||
-                cond.op == Condition::OP_LE ||
-                cond.op == Condition::OP_GE)
+            if (cd->is_only_primary)
             {
-                BPlusTree::ptr indices = make_shared<BPlusTree>(indices_filename, cd->typeEnum);
-                data_t key = cond.expr.value.data;
                 vector<int> ans;
-                switch(cond.op)
+                if (primary_hash->Exists(key)) ans.push_back(primary_hash->Fetch(key));
+                return ans;
+            }
+            if (cd->has_multi_primary_hash)
+            {
+                if (multi_primary_hash->Count(key) > 0)
+                    return *(multi_primary_hash->Fetch(key).get());
+            }
+            if (cd->indexed)
+            {
+                vector<int> ans;
+                auto iter = column_indices->Lower(key);
+                while(!iter.End() && compare(cd->typeEnum, iter.Key(), key) == 0)
                 {
-                case Condition::OP_EQ:
-                    {
-                        auto iter = indices->Lower(key);
-                        while(!iter.End() && compare(cd->typeEnum, iter.Key(), key) == 0)
-                        {
-                            ans.push_back(iter.Value());
-                            iter.Next();
-                        }
-                    }
-                    break;
-                case Condition::OP_NEQ:
-                    {
-                        auto iter = indices->Begin();
-                        while(!iter.End() && compare(cd->typeEnum, iter.Key(), key) < 0)
-                        {
-                            ans.push_back(iter.Value());
-                            iter.Next();
-                        }
-                        iter = indices->Upper(key);
-                        while(!iter.End())
-                        {
-                            ans.push_back(iter.Value());
-                            iter.Next();
-                        }
-                    }
-                    break;
-                case Condition::OP_LT:
-                    {
-                        auto iter = indices->Begin();
-                        while(!iter.End() && compare(cd->typeEnum, iter.Key(), key) < 0)
-                        {
-                            ans.push_back(iter.Value());
-                            iter.Next();
-                        }
-                    }
-                    break;
-                case Condition::OP_GT:
-                    {
-                        auto iter = indices->Upper(key);
-                        while(!iter.End())
-                        {
-                            ans.push_back(iter.Value());
-                            iter.Next();
-                        }
-                    }
-                    break;
-                case Condition::OP_LE:
-                    {
-                        auto iter = indices->Begin();
-                        while(!iter.End() && compare(cd->typeEnum, iter.Key(), key) <= 0)
-                        {
-                            ans.push_back(iter.Value());
-                            iter.Next();
-                        }
-                    }
-                    break;
-                case Condition::OP_GE:
-                    {
-                        auto iter = indices->Lower(key);
-                        while(!iter.End())
-                        {
-                            ans.push_back(iter.Value());
-                            iter.Next();
-                        }
-                    }
-                    break;
-                default: assert(false);
+                    ans.push_back(iter.Value());
+                    iter.Next();
                 }
                 return ans;
             }
+        } else if (cond.op == Condition::OP_NEQ)
+        {
+            if (cd->indexed)
+            {
+                vector<int> ans;
+                auto iter = column_indices->Begin();
+                while(!iter.End() && compare(cd->typeEnum, iter.Key(), key) < 0)
+                {
+                    ans.push_back(iter.Value());
+                    iter.Next();
+                }
+                iter = column_indices->Upper(key);
+                while(!iter.End())
+                {
+                    ans.push_back(iter.Value());
+                    iter.Next();
+                }
+                return ans;
+            }
+        } else if (cond.op == Condition::OP_LT)
+        {
+            if (cd->indexed)
+            {
+                vector<int> ans;
+                auto iter = column_indices->Begin();
+                while(!iter.End() && compare(cd->typeEnum, iter.Key(), key) < 0)
+                {
+                    ans.push_back(iter.Value());
+                    iter.Next();
+                }
+                return ans;
+            }
+        } else if (cond.op == Condition::OP_GT)
+        {
+            if (cd->indexed)
+            {
+                vector<int> ans;
+                auto iter = column_indices->Upper(key);
+                while(!iter.End())
+                {
+                    ans.push_back(iter.Value());
+                    iter.Next();
+                }
+                return ans;
+            }
+        } else if (cond.op == Condition::OP_LE)
+        {
+            if (cd->indexed)
+            {
+                vector<int> ans;
+                auto iter = column_indices->Begin();
+                while(!iter.End() && compare(cd->typeEnum, iter.Key(), key) <= 0)
+                {
+                    ans.push_back(iter.Value());
+                    iter.Next();
+                }
+                return ans;
+            }
+        } else if (cond.op == Condition::OP_GE)
+        {
+            if (cd->indexed)
+            {
+                vector<int> ans;
+                auto iter = column_indices->Lower(key);
+                while(!iter.End())
+                {
+                    ans.push_back(iter.Value());
+                    iter.Next();
+                }
+                return ans;
+            }
+        } else {
+            assert(false);
         }
     }
 
@@ -407,9 +470,30 @@ void solve_column_tb_name(Context* ctx, const vector<string>& tables, Column& co
 
 int search_in_primary(TableDesc::ptr td, data_t key)
 {
-    assert(td->PrimaryKeyIdx() != -1);
-    BPlusTree::ptr indices = make_shared<BPlusTree>(td->Column(td->PrimaryKeyIdx())->PrimaryFilename(), td->Column(td->PrimaryKeyIdx())->typeEnum);
-    auto iter = indices->Lower(key);
-    if (iter.End() || compare(td->Column(td->PrimaryKeyIdx())->typeEnum, key, iter.Key()) != 0) return -1;
-    return iter.Value();
+    assert((int)key->size() == td->PrimarySize());
+    HashTable::ptr indices = make_shared<HashTable>(td->PrimaryFilename(), td->PrimarySize());
+    return indices->Exists(key) ? indices->Fetch(key) : -1;
+}
+
+vector<int> search_in_oneof_primary(ColDesc::ptr cd, data_t key)
+{
+    assert(cd->is_oneof_primary);
+    vector<int> ans;
+    if (cd->is_oneof_primary)
+    {
+        HashTable::ptr indices = make_shared<HashTable>(cd->td->PrimaryFilename(), cd->td->PrimarySize());
+        if (indices->Exists(key))
+        {
+            ans.push_back(indices->Fetch(key));
+        }
+    } else if (cd->has_multi_primary_hash){
+        MultiHashTable::ptr indices = make_shared<MultiHashTable>(cd->MultiPrimaryFilename(), cd->size);
+        if (indices->Count(key) > 0)
+        {
+            ans = *indices->Fetch(key).get();
+        }
+    } else {
+        assert(false);
+    }
+    return ans;
 }

@@ -9,13 +9,22 @@ SlotsFile::SlotsFile(const string& filename)
     : filename(filename)
 {
     file = make_shared<File>(filename);
-    current_rid = 0;
+    header = (header_t*)file->ReadPage(0)->data();
+    current_rid = RID(1, 0);
+
+    if (header->valid == 0)
+    {
+        header->valid = 1;
+        header->last_page_id = 1;
+    }
 }
 
 // 插入，返回rid
 int SlotsFile::Insert(data_t data)
 {
-    file->ResetNextPage();
+    assert(data->size() < PAGE_SIZE - 8);
+
+    file->ResetNextPage(header->last_page_id);
     while(true)
     {
         data_t page = file->NextPage(true);
@@ -24,6 +33,7 @@ int SlotsFile::Insert(data_t data)
         int free_space = PAGE_SIZE - 8 - n_slots*8 - free_offset;
         if (free_space >= (int)data->size() + 8) break;
     }
+    header->last_page_id = max(header->last_page_id, file->CurrentPage());
 
     data_t page = file->ReadPage(file->CurrentPage(), false);
     int free_offset = *(int*)(page->data()+PAGE_SIZE-4);
@@ -73,7 +83,7 @@ data_t SlotsFile::Fetch(int rid)
 // 开始的数据，如果没有则返回nullptr
 data_t SlotsFile::Begin()
 {
-    current_rid = RID(0, 0);
+    current_rid = RID(1, 0);
     data_t first = Fetch(current_rid);
     if (first != nullptr) return first;
     return Next();

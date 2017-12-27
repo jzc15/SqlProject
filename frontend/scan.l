@@ -7,15 +7,17 @@
 #include <vector>
 #include "stmts.hpp"
 #include "frontend_parse.h"
+#include "helper.h"
 
 using namespace std;
 
 #define SAVE_TOKEN yylval.str = new std::string(yytext, yyleng);
 #define SAVE_TOKEN2 yylval.str = new std::string(yytext+1, yyleng-2)
 #define SAVE_INT { string x(yytext, yyleng); yylval.int_value = atoi(x.c_str()); }
+#define SAVE_FLOAT { string x(yytext, yyleng); yylval.float_value = atof(x.c_str()); }
 #define TOKEN(t) yylval.token = t
 #define PRINT(t) { \
-    printf("[%s] %s\n", std::string(yytext, yyleng).c_str(), #t); \
+    if (scan_debug) printf("[%s] %s\n", std::string(yytext, yyleng).c_str(), #t); \
 }
 
 
@@ -34,8 +36,10 @@ using namespace std;
 NEWLINE                 (\r|\n|\r\n)
 WHITESPACE			    ([ \t]+)
 IDENTIFIER              ([A-Za-z][_0-9A-Za-z]*)
-VALUE_INT               ([0-9]+)
-VALUE_STRING           '[^']*'
+IDENTIFIER2             `([A-Za-z][_0-9A-Za-z]*)`
+VALUE_INT               (-?[0-9]+)
+VALUE_STRING            '([^\'\n]|(\\\'))*'
+VALUE_FLOAT             (-?[0-9]+\.[0-9]+)
 SIMPLE_OPERATOR         (";"|"`"|"'"|"("|")"|","|"*"|".")
 
 %%
@@ -89,6 +93,8 @@ SIMPLE_OPERATOR         (";"|"`"|"'"|"("|")"|","|"*"|".")
 {NEWLINE}               { /*skip*/                                                      }
 {WHITESPACE}            { /*skip*/                                                      }
 {IDENTIFIER}            { SAVE_TOKEN; PRINT(IDENTIFIER); return IDENTIFIER;             }
+{IDENTIFIER2}           { SAVE_TOKEN2; PRINT(IDENTIFIER); return IDENTIFIER;            }
+{VALUE_FLOAT}           { SAVE_FLOAT; PRINT(VALUE_FLOAT); return VALUE_FLOAT;           }
 {VALUE_INT}             { SAVE_INT; PRINT(VALUE_INT); return VALUE_INT;                 }
 {VALUE_STRING}          { SAVE_TOKEN2; PRINT(VALUE_STRING); return VALUE_STRING;        }
 {SIMPLE_OPERATOR}       { return yytext[0];                                             }

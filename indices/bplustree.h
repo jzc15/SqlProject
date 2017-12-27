@@ -18,7 +18,7 @@ using namespace std;
 class BPlusTree
 {
 private:
-    const static int N = 4;
+    const static int N = 380;
     enum page_t { PAGE_NONE = 0, PAGE_HEADER, PAGE_NODE };
     struct header_t
     {

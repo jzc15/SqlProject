@@ -1,4 +1,5 @@
 #include "dbop.h"
+#include "helper.h"
 
 void show_databases(Context* ctx)
 {
@@ -10,6 +11,7 @@ void show_databases(Context* ctx)
 
 void create_database(Context* ctx, const string& db_name)
 {
+    TITLE(create_database)
     mkdirp(path_join(ctx->storage_path, db_name));
 }
 

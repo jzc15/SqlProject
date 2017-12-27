@@ -39,6 +39,10 @@ public:
     // 是否结束
     bool End();
 
+    void MarkDirty(int page);
+
+    void Close();
+
 private:
     string filename;
     int next_page;

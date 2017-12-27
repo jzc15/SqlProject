@@ -18,10 +18,7 @@ File::File(string filename) : filename(filename)
 
 File::~File()
 {
-    for(auto x : dirty_marks)
-    {
-        SavePage(x, data_pool[x]);
-    }
+    Close();
 }
 
 void File::ResetNextPage(int page)
@@ -65,6 +62,21 @@ int File::CurrentPage()
 bool File::End()
 {
     return next_page >= total_page;
+}
+
+void File::Close()
+{
+    for(auto x : dirty_marks)
+    {
+        SavePage(x, data_pool[x]);
+    }
+    data_pool.clear();
+    dirty_marks.clear();
+}
+
+void File::MarkDirty(int page)
+{
+    dirty_marks.insert(page);
 }
 
 data_t File::LoadPage(int page)

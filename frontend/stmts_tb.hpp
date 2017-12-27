@@ -20,7 +20,7 @@ public:
     public:
         int type_no; // 1~4
         ColumnDefine column_define;
-        string primary_column;
+        vector<string> primary_columns;
         ColumnForeign foreign_column;
 
         Field(){}
@@ -44,7 +44,10 @@ public:
                 cols.push_back(x.column_define);
             } else if (x.type_no == 3)
             {
-                primary_cols.push_back(x.primary_column);
+                for(auto c : x.primary_columns)
+                {
+                    primary_cols.push_back(c);
+                }
             } else if (x.type_no == 4)
             {
                 foreign_cols.push_back(x.foreign_column);

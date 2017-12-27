@@ -50,11 +50,13 @@ public:
     int UnfixedColumnCount();
     size_t FixedDataSize();
 
-    int PrimaryKeyIdx();
-
     ColDesc::ptr Column(const string& columnName);
     ColDesc::ptr Column(int index);
     bool IsColumnExists(const string& columnName);
+
+    string PrimaryFilename();
+    int PrimarySize();
+    data_t PrimaryIdxs(); // 主键列表，每个字节是一位
 
     Json Dump();
 
@@ -62,7 +64,8 @@ private:
     int fixed_column_count;
     int unfixed_column_count;
     size_t fixed_data_size;
-    int primary_key_idx;
+    int primary_size;
+    data_t primary_idxs;
     map<string, int> columnIndex;
     map<string, ColDesc::ptr> columnPtr;
 };

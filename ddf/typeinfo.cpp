@@ -8,7 +8,7 @@ static map<string, size_t> typeSize = {
     {INT_TYPE, 4},
     {CHAR_TYPE, 1},
     {VARCHAR_TYPE, 1},
-    {DATE_TYPE, 4},
+    {DATE_TYPE, sizeof(time_t)},
     {FLOAT_TYPE, 8}
 };
 size_t type_size(const string& typeName)
@@ -81,19 +81,22 @@ int compare(type_t type, data_t data_a, data_t data_b)
 
 string stringify(type_t type, data_t data)
 {
-    data_t ans = alloc_data(data->size()+10);
+    char buf[1024];
     switch(type)
     {
     case INT_ENUM:
-        sprintf((char*)ans->data(), "%d", *(int*)(data->data()));
+        sprintf(buf, "%d", *(int*)(data->data()));
         break;
     case FLOAT_ENUM:
-        sprintf((char*)ans->data(), "%f", *(float*)(data->data()));
+        sprintf(buf, "%f", *(float*)(data->data()));
         break;
     case CHAR_ENUM: case VARCHAR_ENUM:
-        sprintf((char*)ans->data(), "'%s'", string((char*)data->data(), data->size()).c_str());
+        sprintf(buf, "'%s'", string((char*)data->data(), data->size()).c_str());
+        break;
+    case DATE_ENUM:
+        sprintf(buf, "%d", *(time_t*)(data->data()));
         break;
     default: assert(false);
     }
-    return string((char*)ans->data(), ans->size());
+    return buf;
 }

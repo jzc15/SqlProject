@@ -6,6 +6,10 @@
 #include <disk/common.h>
 #include <cstdio>
 #include <cassert>
+#include <sstream>
+#include <iomanip>
+#include <ctime>
+#include <iostream>
 
 using namespace std;
 
@@ -13,13 +17,31 @@ using namespace std;
 class Value
 {
 public:
-    enum ValueType { VALUE_INT, VALUE_STRING, VALUE_NULL };
+    enum ValueType { VALUE_INT, VALUE_STRING, VALUE_FLOAT, VALUE_NULL };
     ValueType value_type;
     data_t data;
 
     static Value int_value(int value) { Value ans; ans.value_type = VALUE_INT; ans.data = int_data(value); return ans; }
+    static Value float_value(float value) { Value ans; ans.value_type = VALUE_FLOAT; ans.data = float_data(value); return ans; }
     static Value string_value(const string& value) { Value ans; ans.value_type = VALUE_STRING; ans.data = string_data(value); return ans; }
     static Value null_value() { Value ans; ans.value_type = VALUE_NULL; ans.data = nullptr; return ans; }
+    
+    void string_to_date()
+    {
+        std::tm tm = {};
+        std::stringstream ss(string((char*)data->data(), data->size()));
+        ss >> std::get_time(&tm, "%Y-%m-%d");
+        time_t t = std::mktime(&tm);
+
+        data = alloc_data(0);
+        append(data, t);
+    }
+    void int_to_float()
+    {
+        int value = *(int*)data->data();
+        *(float*)data->data() = value;
+        value_type = VALUE_FLOAT;
+    }
 
     string stringify() const
     {
@@ -31,6 +53,9 @@ public:
             break;
         case VALUE_STRING:
             sprintf(buf, "'%s'", string((char*)data->data(), data->size()).c_str());
+            break;
+        case VALUE_FLOAT:
+            sprintf(buf, "%f", *(float*)(data->data()));
             break;
         case VALUE_NULL:
             return "NULL";
@@ -113,9 +138,9 @@ public:
     static Selector columns_selector(const vector<Column>& columns) { Selector ans; ans.selector_type = SELECT_COLUMNS; ans.columns = columns; return ans; }
 };
 
-void insert_op(Context* ctx, const string& tb_name, const vector<vector<Value> >& values_list);
-void delete_op(Context* ctx, const string& tb_name, const vector<Condition>& conditions);
-void update_op(Context* ctx, const string& tb_name, const vector<Assignment>& assignments, const vector<Condition>& conditions);
+void insert_op(Context* ctx, const string& tb_name, vector<vector<Value> > values_list);
+void delete_op(Context* ctx, const string& tb_name, vector<Condition> conditions);
+void update_op(Context* ctx, const string& tb_name, vector<Assignment> assignments, vector<Condition> conditions);
 void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Condition> conditions);
 
 #endif // ENGINE_CRUD_OP_H

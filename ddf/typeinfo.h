@@ -20,7 +20,7 @@ using namespace std;
 #define INT_TYPE ("int")
 #define CHAR_TYPE ("char")
 #define VARCHAR_TYPE ("varchar")
-#define DATE_TYPE ("date")
+#define DATE_TYPE ("date") // DATE储存为int
 #define FLOAT_TYPE ("float")
 
 enum type_t {

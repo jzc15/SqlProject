@@ -24,6 +24,10 @@ public:
     data_t Generate();
     // 恢复
     void Recover(data_t data);
+    // 复制
+    static Record::ptr Clone(Record::ptr record);
+
+    data_t PrimaryKey();
 
     void SetValue(const string& columnName, data_t data);
     void SetValue(int columnIndex, data_t data);

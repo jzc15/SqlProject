@@ -18,6 +18,7 @@ using namespace std;
 %union {
     std::string* str;
     int int_value;
+    float float_value;
     int token;
     Statement* stmt;
     vector<CreateTable::Field>* fields;
@@ -44,11 +45,12 @@ using namespace std;
 %token DELETE FROM WHERE UPDATE
 %token SET SELECT IS PINT VARCHAR DESC INDEX AND
 %token DATE FLOAT FOREIGN REFERENCES
-%token IDENTIFIER VALUE_INT VALUE_STRING
+%token IDENTIFIER VALUE_INT VALUE_STRING VALUE_FLOAT
 %token NEQ LE GE EQ LT GT
 
 %type <str> dbName tbName colName IDENTIFIER VALUE_STRING
 %type <int_value> VALUE_INT
+%type <float_value> VALUE_FLOAT
 %type <pro> program
 %type <stmt> stmt sysStmt dbStmt tbStmt idxStmt
 %type <field> field
@@ -66,7 +68,7 @@ using namespace std;
 %type <assignments> setClauses
 %type <selector> selector
 %type <columns> colSelector
-%type <strings> tableList
+%type <strings> tableList columnList
 
 %start program
 
@@ -74,7 +76,7 @@ using namespace std;
 
 program         : /* empty */
                     {
-                        pro = new Program();
+                        
                     }
                 | program stmt
                     {
@@ -207,6 +209,15 @@ field           : colName type
                         DELETE($1);
                         DELETE($2);
                     }
+                | type type
+                    {
+                        cerr << "[warning] keyword `" << type_name($1->type) << "` as a column name." << endl;
+                        $$ = new CreateTable::Field();
+                        $$->type_no = 1;
+                        $$->column_define = ColumnDefine(type_name($1->type), *$2, true);
+                        DELETE($1);
+                        DELETE($2);
+                    }
                 | colName type NOT TNULL
                     {
                         $$ = new CreateTable::Field();
@@ -215,11 +226,11 @@ field           : colName type
                         DELETE($1);
                         DELETE($2);
                     }
-                | PRIMARY KEY '(' colName ')'
+                | PRIMARY KEY '(' columnList ')'
                     {
                         $$ = new CreateTable::Field();
                         $$->type_no = 3;
-                        $$->primary_column = *$4;
+                        $$->primary_columns = *$4;
                         DELETE($4);
                     }
                 | FOREIGN KEY '(' colName ')' REFERENCES tbName '(' colName ')'
@@ -231,6 +242,20 @@ field           : colName type
                         DELETE($7);
                         DELETE($9);
                     }
+                ;
+
+columnList      : colName
+                {
+                    $$ = new vector<string>();
+                    $$->push_back(*$1);
+                    DELETE($1);
+                }
+                | columnList ',' colName
+                {
+                    $$ = $1;
+                    $$->push_back(*$3);
+                    DELETE($3);
+                }
                 ;
 
 type            : PINT '(' VALUE_INT ')'
@@ -289,6 +314,11 @@ value           : VALUE_INT
                         $$ = new Value();
                         *$$ = Value::string_value(*$1);
                         DELETE($1);
+                    }
+                | VALUE_FLOAT
+                    {
+                        $$ = new Value();
+                        *$$ = Value::float_value($1);
                     }
                 | TNULL
                     {

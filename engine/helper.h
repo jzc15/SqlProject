@@ -9,10 +9,10 @@ using namespace std;
 
 #define TITLE(name) {cout << "========= " << #name << " =========" << endl;}
 
-// 检查该记录是否合法, rid表示当前record原来的rid，如果是新记录rid=-1
+// 检查该记录是否合法
 bool record_check_ok(Record::ptr record, int rid = -1);
 // 类型检查
-bool value_type_check_ok(type_t type, Value::ValueType value_type);
+bool value_type_trans_ok(type_t type, Value& value);
 // 将该记录从索引中移除
 void remove_record_from_indices(Record::ptr record, int rid);
 // 在索引中添加记录
@@ -33,5 +33,6 @@ vector<int> list_conditions_rids(TableDesc::ptr td, const vector<Condition>& con
 void solve_column_tb_name(Context* ctx, const vector<string>& tables, Column& column);
 
 int search_in_primary(TableDesc::ptr td, data_t key);
+vector<int> search_in_oneof_primary(ColDesc::ptr td, data_t key);
 
 #endif // ENGINE_HELPER_H

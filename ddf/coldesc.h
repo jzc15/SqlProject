@@ -27,7 +27,7 @@ public:
     size_t display_length; // 展示的长度，对int有效
     bool allow_null;
     bool indexed;
-    bool is_primary;
+    bool is_oneof_primary;
     bool is_foreign_key;
     string foreign_tb_name;
     string foreign_col_name;
@@ -36,17 +36,20 @@ public:
     size_t size; // 对于定长数据，占多少*字节*的空间
     bool fixed; // 是否定长
 
+    bool is_only_primary; // 是否是唯一的主键
+    bool has_multi_primary_hash; // 是否有可重的主键
+
     ColDesc(TableDesc* td, const string& columnName, const string& typeName, size_t length, bool allow_null);
     ColDesc(TableDesc* td, const Json& info); // 从json中载入
     ~ColDesc();
 
     int Length();
     void SetIndexed();
-    void SetPrimary();
+    void SetOneOfPrimary();
     void SetForeignKey(string foreign_tb_name, string foreign_col_name);
 
     string IndexFilename();
-    string PrimaryFilename();
+    string MultiPrimaryFilename();
 
     Json Dump();
 

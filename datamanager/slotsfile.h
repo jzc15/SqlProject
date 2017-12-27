@@ -38,8 +38,16 @@ public:
     data_t Next();
 
 private:
+    struct header_t
+    {
+        int valid;
+        int last_page_id;
+    };
+
+private:
     string filename;
     File::ptr file;
+    header_t* header;
     int current_rid;
 };
 

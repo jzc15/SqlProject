@@ -19,7 +19,7 @@ int BPlusTree::Iterator::Value()
 {
     assert(0 <= key_pos && key_pos < node->size);
     data_t value_list = tree->data_file->Fetch(node->children_entries[key_pos]);
-    assert(0 <= value_pos && value_pos < (int)(value_list->size()/sizeof(int)));
+    assert(0 <= value_pos && value_pos < node->values_count[key_pos]);
     return ((int*)(value_list->data()))[value_pos];
 }
 
@@ -34,7 +34,7 @@ void BPlusTree::Iterator::Prev()
     } else if (key_pos != 0) {
         key_pos --;
         data_t value_list = tree->data_file->Fetch(node->children_entries[key_pos]);
-        value_pos = value_list->size()/sizeof(int)-1;
+        value_pos = node->values_count[key_pos]-1;
     } else {
         int page_id = node->prev_page_id;
         node = NULL;
@@ -45,7 +45,7 @@ void BPlusTree::Iterator::Prev()
             node = tree->LoadNode(page_id);
             key_pos = node->size - 1;
             data_t value_list = tree->data_file->Fetch(node->children_entries[key_pos]);
-            value_pos = value_list->size()/sizeof(int)-1;
+            value_pos = node->values_count[key_pos]-1;
         }
     }
 }
@@ -54,9 +54,9 @@ void BPlusTree::Iterator::Next()
     if (End()) return;
     assert(0 <= key_pos && key_pos < node->size);
     data_t value_list = tree->data_file->Fetch(node->children_entries[key_pos]);
-    assert(0 <= value_pos && value_pos < (int)(value_list->size()/sizeof(int)));
+    assert(0 <= value_pos && value_pos < node->values_count[key_pos]);
 
-    if (value_pos+1 < (int)(value_list->size()/sizeof(int)))
+    if (value_pos+1 < node->values_count[key_pos])
     {
         value_pos ++;
     } else if (key_pos+1 < node->size) {
