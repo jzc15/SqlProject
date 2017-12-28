@@ -64,7 +64,9 @@ int compare(type_t type, data_t data_a, data_t data_b)
         return *(int*)(data_a->data()) - *(int*)(data_b->data());
         break;
     case FLOAT_ENUM:
-        return *(float*)(data_a->data()) - *(float*)(data_b->data());
+        return 
+            *(float*)(data_a->data()) < *(float*)(data_b->data()) ? -1 : 
+            (*(float*)(data_a->data()) == *(float*)(data_b->data()) ? 0 : 1);
         break;
     case CHAR_ENUM: case VARCHAR_ENUM:
         for(int i = 0; i < (int)data_a->size() || i < (int)data_b->size(); i ++)

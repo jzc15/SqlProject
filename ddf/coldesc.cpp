@@ -75,9 +75,9 @@ int ColDesc::Length()
     return -1;
 }
 
-void ColDesc::SetIndexed()
+void ColDesc::SetIndexed(bool indexed)
 {
-    this->indexed = true;
+    this->indexed = indexed;
 }
 
 void ColDesc::SetOneOfPrimary()

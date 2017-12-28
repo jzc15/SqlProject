@@ -5,6 +5,7 @@
 #include <disk/file.h>
 #include <ddf/typeinfo.h>
 #include <datamanager/slotsfile.h>
+#include <datamanager/vectorfile.h>
 #include <memory>
 #include <string>
 
@@ -37,7 +38,7 @@ private:
         int prev_page_id; // 叶节点的上一个, -1表示没有
         int size;
         int key_rids[N]; // 关键字
-        int children_entries[N]; // 儿子 / 数据rid
+        int children_entries[N]; // 儿子 / 数据pos
         int values_count[N]; // 对应儿子包含的value总数
     };
     struct search_rst // 搜索节点, node=NULL表示没有
@@ -111,7 +112,8 @@ private:
     const type_t type;
     const bool type_fixed;
     File::ptr b_file;
-    SlotsFile::ptr data_file;
+    SlotsFile::ptr key_file;
+    VectorFile::ptr data_file;
 
     header_t* header;
 

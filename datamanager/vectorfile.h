@@ -3,6 +3,7 @@
 
 #include <disk/file.h>
 #include <memory>
+#include <map>
 using namespace std;
 
 typedef shared_ptr<vector<int>> vector_t;
@@ -17,9 +18,9 @@ public:
 
     int NewVector(int value);
     vector_t Fetch(int pos);
-    int Save(int opos, vector_t data);
+    int Save(int opos, vector_t data, bool append_only = false); // 是否只有增加
 
-    void Close();
+    void Flush();
 
 private:
     struct header_t

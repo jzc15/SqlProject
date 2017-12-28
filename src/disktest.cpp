@@ -50,6 +50,14 @@ int main()
         assert(memcmp(page2->data(), y->data(), PAGE_SIZE) == 0);
     }
 
+    {
+        File file("test.data");
+        data_t page1 = file.ReadPage(2, false);
+        assert(memcmp(page1->data(), x->data(), PAGE_SIZE) == 0);
+        data_t page2 = file.ReadPage(3, false);
+        assert(memcmp(page2->data(), y->data(), PAGE_SIZE) == 0);
+    }
+
     cout << "Test Success" << endl;
 
     return 0;

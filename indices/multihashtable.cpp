@@ -34,9 +34,9 @@ void MultiHashTable::Insert(data_t key, int value)
 
         int key_bytes = header->key_bytes;
         extendCopy(file, data_file, tmp_filename, header->key_bytes, header->P, header->M);
-        file->Close();
+        file->Flush();
         file = nullptr;
-        data_file->Close();
+        data_file->Flush();
         data_file = nullptr;
         rmfile(filename);
         cpfile(tmp_filename, filename);
@@ -138,7 +138,7 @@ void MultiHashTable::ins(File::ptr file, VectorFile::ptr data_file, uint8* key, 
                 memcmp((uint8*)node_h + sizeof(node_h_t), key, key_bytes) == 0) {
                 vector_t data = data_file->Fetch(node_h->data_pos);
                 data->push_back(value);
-                node_h->data_pos = data_file->Save(node_h->data_pos, data);
+                node_h->data_pos = data_file->Save(node_h->data_pos, data, true);
                 file->MarkDirty(page_id);
                 return;
             }
@@ -249,7 +249,7 @@ void MultiHashTable::extendCopy(File::ptr file, VectorFile::ptr data_file, const
     VectorFile::ptr newdatafile = make_shared<VectorFile>(newfilename + ".data");
 
     header_t* nheader = initTable(newfile, key_bytes);
-    nheader->M = nextPrime(M*1.7);
+    nheader->M = nextPrime(M*2);
     for(int pos = 0; pos < M; pos ++)
     {
         int page_id = pos / page_entries + 1;
@@ -263,4 +263,6 @@ void MultiHashTable::extendCopy(File::ptr file, VectorFile::ptr data_file, const
                 ins(newfile, newdatafile, (uint8*)node_h+sizeof(node_h_t),data->at(i), key_bytes, P, nheader->M);
         }
     }
+    newfile->Flush();
+    newdatafile->Flush();
 }

@@ -1,6 +1,7 @@
 #include "vectorfile.h"
 #include <cassert>
 #include <cstring>
+#include <iostream>
 
 using namespace std;
 
@@ -50,7 +51,7 @@ vector_t VectorFile::Fetch(int pos)
     }
     return data;
 }
-int VectorFile::Save(int opos, vector_t data)
+int VectorFile::Save(int opos, vector_t data, bool append_only)
 {
     vec_h_t* vec_h = (vec_h_t*)(file->ReadPage(opos/PAGE_SIZE, true)->data() + opos%PAGE_SIZE);
     int pos = opos; // 原位置
@@ -63,7 +64,9 @@ int VectorFile::Save(int opos, vector_t data)
         vec_h->capacity = data->size() * 2;
         pos = header->empty_pos;
         header->empty_pos += sizeof(vec_h_t) + vec_h->capacity*sizeof(int);
+        append_only = false;
     }
+    int append_only_offset = vec_h->size;
     vec_h->size = data->size();
 
     const int npos = pos; // 新位置
@@ -71,7 +74,8 @@ int VectorFile::Save(int opos, vector_t data)
     for(int i = 0; i < vec_h->size; )
     {
         int len = min(vec_h->size - i, (PAGE_SIZE-(pos%PAGE_SIZE))/(int)sizeof(int));
-        memcpy(file->ReadPage(pos/PAGE_SIZE)->data()+(pos%PAGE_SIZE), data->data()+i, len*sizeof(int));
+        if (append_only && i < append_only_offset) len = min(len, append_only_offset - i);
+        if (!append_only || i >= append_only_offset) memcpy(file->ReadPage(pos/PAGE_SIZE)->data()+(pos%PAGE_SIZE), data->data()+i, len*sizeof(int));
         pos += len*sizeof(int);
         i += len;
     }
@@ -79,7 +83,7 @@ int VectorFile::Save(int opos, vector_t data)
     return npos;
 }
 
-void VectorFile::Close()
+void VectorFile::Flush()
 {
-    file->Close();
+    file->Flush();
 }

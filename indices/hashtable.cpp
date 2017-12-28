@@ -31,7 +31,7 @@ void HashTable::Insert(data_t key, int value)
 
         int key_bytes = header->key_bytes;
         extendCopy(file, tmp_filename, header->key_bytes, header->P, header->M);
-        file->Close();
+        file->Flush();
         file = nullptr;
         rmfile(filename);
         cpfile(tmp_filename, filename);
@@ -224,7 +224,7 @@ void HashTable::extendCopy(File::ptr file, const string& newfilename, int key_by
 
     File::ptr newfile = make_shared<File>(newfilename);
     header_t* nheader = initTable(newfile, key_bytes);
-    nheader->M = nextPrime(M*1.7);
+    nheader->M = nextPrime(M*2);
     for(int pos = 0; pos < M; pos ++)
     {
         int page_id = pos / page_entries + 1;
@@ -237,4 +237,5 @@ void HashTable::extendCopy(File::ptr file, const string& newfilename, int key_by
             ins(newfile, (uint8*)node_h+sizeof(node_h_t), node_h->value, key_bytes, P, nheader->M);
         }
     }
+    newfile->Flush();
 }

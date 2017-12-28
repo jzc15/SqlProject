@@ -181,7 +181,7 @@ idxStmt         : CREATE INDEX tbName '(' colName ')'
                     }
                 | DROP INDEX tbName '(' colName ')'
                     {
-                        $$ = new CreateIndexStatement(*$3, *$5);
+                        $$ = new DropIndexStatement(*$3, *$5);
                         DELETE($3);
                         DELETE($5);
                     }

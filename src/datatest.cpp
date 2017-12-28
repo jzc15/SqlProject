@@ -70,12 +70,12 @@ int main()
         }
     }
 
-    system("rm test.data");
+    system("rm test2.data");
     const int N = 55073;
     int vecs1[N], vecs2[N];
     int bigvecs[10];
     {
-        VectorFile::ptr file = make_shared<VectorFile>("test.data");
+        VectorFile::ptr file = make_shared<VectorFile>("test2.data");
         for(int i = 0; i < N; i ++)
             vecs1[i] = file->NewVector(i);
         for(int i = 0; i < 10; i ++)
@@ -93,7 +93,7 @@ int main()
             vecs2[i] = file->NewVector(i);
     }
     {
-        VectorFile::ptr file = make_shared<VectorFile>("test.data");
+        VectorFile::ptr file = make_shared<VectorFile>("test2.data");
         for(int i = 0; i < N; i ++)
         {
             vector_t data = file->Fetch(vecs1[i]);

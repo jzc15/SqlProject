@@ -44,7 +44,7 @@ public:
     ~ColDesc();
 
     int Length();
-    void SetIndexed();
+    void SetIndexed(bool indexed = true);
     void SetOneOfPrimary();
     void SetForeignKey(string foreign_tb_name, string foreign_col_name);
 

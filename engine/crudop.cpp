@@ -343,12 +343,6 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
             output_types.push_back(cd->typeEnum);
         }
     }
-    for(int i = 0; i < (int)output_titles.size(); i ++)
-    {
-        if (i) cout << " : ";
-        cout << output_titles[i];
-    }
-    cout << endl;
 
     // search records pairs
     vector<Record::ptr> current_records(tables.size()); // 当前每个表的记录
@@ -360,6 +354,16 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
         if (table_idx >= (int)tables.size())
         {
             // new record
+            if (selected_count % 10 == 0)
+            {
+                cout << endl;
+                for(int i = 0; i < (int)output_titles.size(); i ++)
+                {
+                    if (i) cout << " : ";
+                    cout << output_titles[i];
+                }
+                cout << endl;
+            }
             for(int i = 0; i < (int)output_titles.size(); i ++)
             {
                 if (i) cout << " : ";

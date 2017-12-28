@@ -7,7 +7,7 @@ using namespace std;
 
 int main()
 {
-    const string filename = "debug.hash";
+    string filename = "debug.hash";
 
     system(("rm " + filename).c_str());
     {
@@ -36,6 +36,7 @@ int main()
         assert(hash->Fetch(int_data(99)) == 99);
     }
 
+    filename = "debug2.hash";
     system(("rm " + filename).c_str());
     {
         cout << "[3]" << endl;

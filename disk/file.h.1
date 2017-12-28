@@ -1,8 +1,8 @@
-// 8K页式文件系统
 #ifndef DISK_FILE_H
 #define DISK_FILE_H
 
 #include "common.h"
+#include "filecache.h"
 #include <memory>
 #include <string>
 #include <map>
@@ -10,15 +10,13 @@
 
 using namespace std;
 
-#define PAGE_SIZE 8192 // 8KB
-
-// 页式文件
+// 页式文件系统
 class File
 {
 public:
     typedef shared_ptr<File> ptr;
 
-    File(string filename);
+    File(const string& filename);
     ~File();
 
     // 
@@ -45,13 +43,9 @@ public:
 
 private:
     string filename;
+    int fid;
     int next_page;
     int total_page;
-    map<int, data_t> data_pool;
-    set<int> dirty_marks;
-
-    data_t LoadPage(int page);
-    void SavePage(int page, data_t data);
 };
 
 #endif // DISK_FILE_H

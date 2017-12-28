@@ -22,7 +22,7 @@ SlotsFile::SlotsFile(const string& filename)
 // 插入，返回rid
 int SlotsFile::Insert(data_t data)
 {
-    assert(data->size() < PAGE_SIZE - 8);
+    assert(data->size() < PAGE_SIZE - 128);
 
     file->ResetNextPage(header->last_page_id);
     while(true)

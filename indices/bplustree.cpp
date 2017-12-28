@@ -13,14 +13,14 @@ BPlusTree::Iterator::Iterator(BPlusTree* tree, node_t* node, int key_pos, int va
 data_t BPlusTree::Iterator::Key()
 {
     assert(0 <= key_pos && key_pos < node->size);
-    return tree->data_file->Fetch(node->key_rids[key_pos]);
+    return tree->key_file->Fetch(node->key_rids[key_pos]);
 }
 int BPlusTree::Iterator::Value()
 {
     assert(0 <= key_pos && key_pos < node->size);
-    data_t value_list = tree->data_file->Fetch(node->children_entries[key_pos]);
+    vector_t value_list = tree->data_file->Fetch(node->children_entries[key_pos]);
     assert(0 <= value_pos && value_pos < node->values_count[key_pos]);
-    return ((int*)(value_list->data()))[value_pos];
+    return value_list->data()[value_pos];
 }
 
 void BPlusTree::Iterator::Prev()
@@ -33,7 +33,6 @@ void BPlusTree::Iterator::Prev()
         value_pos --;
     } else if (key_pos != 0) {
         key_pos --;
-        data_t value_list = tree->data_file->Fetch(node->children_entries[key_pos]);
         value_pos = node->values_count[key_pos]-1;
     } else {
         int page_id = node->prev_page_id;
@@ -44,7 +43,6 @@ void BPlusTree::Iterator::Prev()
         {
             node = tree->LoadNode(page_id);
             key_pos = node->size - 1;
-            data_t value_list = tree->data_file->Fetch(node->children_entries[key_pos]);
             value_pos = node->values_count[key_pos]-1;
         }
     }
@@ -53,7 +51,6 @@ void BPlusTree::Iterator::Next()
 {
     if (End()) return;
     assert(0 <= key_pos && key_pos < node->size);
-    data_t value_list = tree->data_file->Fetch(node->children_entries[key_pos]);
     assert(0 <= value_pos && value_pos < node->values_count[key_pos]);
 
     if (value_pos+1 < node->values_count[key_pos])
@@ -88,7 +85,8 @@ BPlusTree::BPlusTree(const string& filename, type_t type)
     assert(N%2 == 0);
 
     this->b_file = make_shared<File>(filename);
-    this->data_file = make_shared<SlotsFile>(filename + ".data");
+    this->key_file = make_shared<SlotsFile>(filename + ".key");
+    this->data_file = make_shared<VectorFile>(filename + ".data");
 
     Init();
 }
@@ -101,6 +99,7 @@ BPlusTree::~BPlusTree()
 void BPlusTree::RemoveIndex(const string& filename)
 {
     if (exists(filename)) rmfile(filename);
+    if (exists(filename + ".key")) rmfile(filename + ".key");
     if (exists(filename + ".data")) rmfile(filename + ".data");
 }
 
@@ -119,8 +118,8 @@ void BPlusTree::Insert(data_t key, int value)
         header->root_page_id = s->page_id;
         s->is_leaf = false;
         s->size = 1;
-        data_t max_key = data_file->Fetch(root->key_rids[root->size-1]);
-        s->key_rids[0] = data_file->Insert(max_key);
+        data_t max_key = key_file->Fetch(root->key_rids[root->size-1]);
+        s->key_rids[0] = key_file->Insert(max_key);
         s->children_entries[0] = root->page_id;
         s->values_count[0] = header->total_count;
         InsertNotFull(s, key, value);
@@ -255,7 +254,7 @@ void BPlusTree::Debug(node_t* node)
     cout << "is_leaf = " << node->is_leaf << endl;
     for(int i = 0; i < node->size; i ++)
     {
-        cout << "key = "; Output(data_file->Fetch(node->key_rids[i])); cout << " ";
+        cout << "key = "; Output(key_file->Fetch(node->key_rids[i])); cout << " ";
         cout << "child = " << node->children_entries[i]; cout << " ";
         cout << "count = " << node->values_count[i]; cout << " ";
         cout << endl;
@@ -301,9 +300,9 @@ void BPlusTree::SplitChild(node_t* node, int idx)
     for(int i = 0; i < N/2; i ++)
         b_count += b->values_count[i];
     
-    data_t a_max_key = data_file->Fetch(a->key_rids[a->size-1]);
+    data_t a_max_key = key_file->Fetch(a->key_rids[a->size-1]);
     node->key_rids[idx+1] = node->key_rids[idx];
-    node->key_rids[idx] = data_file->Insert(a_max_key);
+    node->key_rids[idx] = key_file->Insert(a_max_key);
     node->children_entries[idx+1] = b->page_id;
     node->values_count[idx] = a_count;
     node->values_count[idx+1] = b_count;
@@ -313,16 +312,15 @@ void BPlusTree::SplitChild(node_t* node, int idx)
 void BPlusTree::InsertNotFull(node_t* node, data_t key, int value)
 {
     int pos = 0; // 第一个>=key的位置
-    while(pos < node->size && compare(type, data_file->Fetch(node->key_rids[pos]), key) < 0) pos ++;
+    while(pos < node->size && compare(type, key_file->Fetch(node->key_rids[pos]), key) < 0) pos ++;
 
     if (node->is_leaf)
     {
-        if (pos < node->size && compare(type, data_file->Fetch(node->key_rids[pos]), key) == 0) // key相等
+        if (pos < node->size && compare(type, key_file->Fetch(node->key_rids[pos]), key) == 0) // key相等
         {
-            data_t value_list = data_file->Fetch(node->children_entries[pos]); // 追加value
-            append(value_list, value);
-            data_file->Delete(node->children_entries[pos]);
-            node->children_entries[pos] = data_file->Insert(value_list);
+            vector_t value_list = data_file->Fetch(node->children_entries[pos]); // 追加value
+            value_list->push_back(value);
+            node->children_entries[pos] = data_file->Save(node->children_entries[pos], value_list, true);
             node->values_count[pos] ++;
         } else {
             for(int i = node->size - 1; i >= pos; i --) // 插入
@@ -332,9 +330,8 @@ void BPlusTree::InsertNotFull(node_t* node, data_t key, int value)
                 node->values_count[i+1] = node->values_count[i];
             }
             node->size ++;
-            data_t value_list = int_data(value);
-            node->key_rids[pos] = data_file->Insert(key);
-            node->children_entries[pos] = data_file->Insert(value_list);
+            node->key_rids[pos] = key_file->Insert(key);
+            node->children_entries[pos] = data_file->NewVector(value);
             node->values_count[pos] = 1;
         }
     } else {
@@ -343,16 +340,16 @@ void BPlusTree::InsertNotFull(node_t* node, data_t key, int value)
         if (c->size == N)
         {
             SplitChild(node, pos);
-            if (compare(type, key, data_file->Fetch(node->key_rids[pos])) > 0) pos ++;
+            if (compare(type, key, key_file->Fetch(node->key_rids[pos])) > 0) pos ++;
         }
         InsertNotFull(LoadNode(node->children_entries[pos]), key, value);
         node->values_count[pos] ++;
         if (pos == node->size-1)
         {
-            if (compare(type, key, data_file->Fetch(node->key_rids[pos])) > 0)
+            if (compare(type, key, key_file->Fetch(node->key_rids[pos])) > 0)
             {
-                data_file->Delete(node->key_rids[pos]);
-                node->key_rids[pos] = data_file->Insert(key);
+                key_file->Delete(node->key_rids[pos]);
+                node->key_rids[pos] = key_file->Insert(key);
             }
         }
     }
@@ -374,7 +371,7 @@ void BPlusTree::MergeChildren(node_t* node, int idx)
     if (a->next_page_id != -1) LoadNode(a->next_page_id)->prev_page_id = a->page_id;
     // FIXME 回收b
 
-    data_file->Delete(node->key_rids[idx]);
+    key_file->Delete(node->key_rids[idx]);
     node->key_rids[idx] = node->key_rids[idx+1];
     node->values_count[idx] += node->values_count[idx+1];
     for(int i = idx+1; i+1 < node->size; i ++)
@@ -404,9 +401,9 @@ void BPlusTree::MoveChildBackward(node_t* node, int idx)
     node->values_count[idx+1] += b->values_count[0];
 
     a->size --;
-    data_t key = data_file->Fetch(a->key_rids[a->size-1]);
-    data_file->Delete(node->key_rids[idx]);
-    node->key_rids[idx] = data_file->Insert(key);
+    data_t key = key_file->Fetch(a->key_rids[a->size-1]);
+    key_file->Delete(node->key_rids[idx]);
+    node->key_rids[idx] = key_file->Insert(key);
 }
 
 void BPlusTree::MoveChildForward(node_t* node, int idx)
@@ -427,24 +424,23 @@ void BPlusTree::MoveChildForward(node_t* node, int idx)
     node->values_count[idx-1] += b->values_count[b->size];
 
     b->size ++;
-    data_t key = data_file->Fetch(b->key_rids[b->size-1]);
-    data_file->Delete(node->key_rids[idx-1]);
-    node->key_rids[idx-1] = data_file->Insert(key);
+    data_t key = key_file->Fetch(b->key_rids[b->size-1]);
+    key_file->Delete(node->key_rids[idx-1]);
+    node->key_rids[idx-1] = key_file->Insert(key);
 }
 
 void BPlusTree::DeleteLargeEnough(node_t* node, data_t key, int value)
 {
     int pos = 0; // 第一个<=key的位置
-    while(pos < node->size && compare(type, data_file->Fetch(node->key_rids[pos]), key) < 0) pos ++;
+    while(pos < node->size && compare(type, key_file->Fetch(node->key_rids[pos]), key) < 0) pos ++;
     assert(pos < node->size);
 
     if (node->is_leaf)
     {
-        data_t value_list = data_file->Fetch(node->children_entries[pos]);
-        int* values = (int*)(value_list->data());
+        vector_t value_list = data_file->Fetch(node->children_entries[pos]);
         int value_pos = -1;
-        for(int i = 0; i < (int)(value_list->size()/sizeof(int)); i ++)
-            if (values[i] == value)
+        for(int i = 0; i < (int)value_list->size(); i ++)
+            if (value_list->at(i) == value)
             {
                 value_pos = i;
                 break;
@@ -453,15 +449,14 @@ void BPlusTree::DeleteLargeEnough(node_t* node, data_t key, int value)
         {
             cout << "ERROR AT DELETE KEY : "; Output(key); cout << " value = " << value << endl;
         } else {
-            for(int i = value_pos; i+1 < (int)(value_list->size()/sizeof(int)); i ++)
-                values[i] = values[i+1];
-            value_list->resize(value_list->size() - sizeof(int));
-            data_file->Delete(node->children_entries[pos]);
+            for(int i = value_pos; i+1 < (int)value_list->size(); i ++)
+                value_list->data()[i] = value_list->data()[i+1];
+            value_list->pop_back();
             if (value_list->size() > 0) {
-                node->children_entries[pos] = data_file->Insert(value_list);
+                node->children_entries[pos] = data_file->Save(node->children_entries[pos], value_list);
                 node->values_count[pos] --;
             } else {
-                data_file->Delete(node->key_rids[pos]);
+                key_file->Delete(node->key_rids[pos]);
                 for(int i = pos; i+1 < node->size; i ++)
                 {
                     node->key_rids[i] = node->key_rids[i+1];
@@ -501,15 +496,15 @@ void BPlusTree::DeleteLargeEnough(node_t* node, data_t key, int value)
 BPlusTree::search_rst BPlusTree::SearchGE(node_t* node, data_t key, int lt_count)
 {
     int pos = 0;
-    while(pos < node->size && compare(type, data_file->Fetch(node->key_rids[pos]), key) < 0) pos ++;
+    while(pos < node->size && compare(type, key_file->Fetch(node->key_rids[pos]), key) < 0) pos ++;
     for(int i = 0; i < pos; i ++) lt_count += node->values_count[i];
     if (pos >= node->size) return (search_rst){NULL, -1, lt_count, 0};
 
     if (node->is_leaf)
     {
         int eq_count = 0;
-        if (compare(type, data_file->Fetch(node->key_rids[pos]), key) == 0)
-            eq_count = data_file->Fetch(node->children_entries[pos])->size() / sizeof(int);
+        if (compare(type, key_file->Fetch(node->key_rids[pos]), key) == 0)
+            eq_count = data_file->Fetch(node->children_entries[pos])->size();
         return (search_rst){node, pos, lt_count, eq_count};
     }
 
@@ -519,15 +514,15 @@ BPlusTree::search_rst BPlusTree::SearchGE(node_t* node, data_t key, int lt_count
 BPlusTree::search_rst BPlusTree::SearchLE(node_t* node, data_t key, int lt_count)
 {
     int pos = node->size - 1;
-    while(pos >= 0 && compare(type, data_file->Fetch(node->key_rids[pos]), key) > 0) pos --;
+    while(pos >= 0 && compare(type, key_file->Fetch(node->key_rids[pos]), key) > 0) pos --;
     for(int i = 0; i < pos; i ++) lt_count += node->values_count[i];
     if (pos < 0) return (search_rst){NULL, -1, lt_count, 0};
 
     if (node->is_leaf)
     {
         int eq_count = 0;
-        if (compare(type, data_file->Fetch(node->key_rids[pos]), key) == 0)
-            eq_count = data_file->Fetch(node->children_entries[pos])->size() / sizeof(int);
+        if (compare(type, key_file->Fetch(node->key_rids[pos]), key) == 0)
+            eq_count = data_file->Fetch(node->children_entries[pos])->size();
         return (search_rst){node, pos, lt_count, eq_count};
     }
 

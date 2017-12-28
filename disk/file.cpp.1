@@ -1,0 +1,64 @@
+#include "file.h"
+#include <cassert>
+#include <cstdio>
+#include <iostream>
+
+using namespace std;
+
+static FileCache cache;
+
+File::File(const string& filename) : filename(filename)
+{
+    next_page = total_page = 0;
+    fid = cache.Register(filename);
+    total_page = cache.TotalPage(fid);
+}
+
+File::~File()
+{
+    cache.Unregister(fid);
+}
+
+void File::ResetNextPage(int page)
+{
+    next_page = page;
+}
+
+data_t File::NextPage(bool read_only)
+{
+    return ReadPage(next_page, read_only);
+}
+
+data_t File::ReadPage(int page, bool read_only)
+{
+    data_t data = cache.LoadPage(fid, page);
+    next_page = page + 1;
+    total_page = max(total_page, next_page);
+    if (!read_only) cache.MarkDirty(fid, page);
+    return data;
+}
+
+data_t File::NewPage(bool read_only)
+{
+    return ReadPage(total_page, read_only);
+}
+
+int File::CurrentPage()
+{
+    return next_page - 1;
+}
+
+bool File::End()
+{
+    return next_page >= total_page;
+}
+
+void File::Flush()
+{
+    cache.Flush(fid);
+}
+
+void File::MarkDirty(int page)
+{
+    cache.MarkDirty(fid, page);
+}

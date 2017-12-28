@@ -18,7 +18,7 @@ File::File(string filename) : filename(filename)
 
 File::~File()
 {
-    Close();
+    Flush();
 }
 
 void File::ResetNextPage(int page)
@@ -64,7 +64,7 @@ bool File::End()
     return next_page >= total_page;
 }
 
-void File::Close()
+void File::Flush()
 {
     for(auto x : dirty_marks)
     {
