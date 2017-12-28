@@ -479,7 +479,7 @@ vector<int> search_in_oneof_primary(ColDesc::ptr cd, data_t key)
 {
     assert(cd->is_oneof_primary);
     vector<int> ans;
-    if (cd->is_oneof_primary)
+    if (cd->is_only_primary)
     {
         HashTable::ptr indices = make_shared<HashTable>(cd->td->PrimaryFilename(), cd->td->PrimarySize());
         if (indices->Exists(key))

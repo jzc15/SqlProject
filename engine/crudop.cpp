@@ -228,10 +228,10 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
                     auto td_b = ctx->dd->SearchTable(b.tb_name);
                     auto cd_a = td_a->Column(a.col_name);
                     auto cd_b = td_b->Column(b.col_name);
-                    if (cd_a->is_oneof_primary)
+                    if (cd_a->is_only_primary)
                     {
                         top_sort.Build(b.tb_name, a.tb_name);
-                    } else if (cd_b->is_oneof_primary)
+                    } else if (cd_b->is_only_primary)
                     {
                         top_sort.Build(a.tb_name, b.tb_name);
                     }
