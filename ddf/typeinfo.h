@@ -13,7 +13,7 @@ using namespace std;
  * char 字符,定长
  * char(x) 字符串,定长
  * varchar(x) 字符串,变长
- * date 日期，定长，存时间戳，int
+ * date 日期，定长，存时间戳，time_t
  * float 浮点数，定长，双精度
  **/
 
