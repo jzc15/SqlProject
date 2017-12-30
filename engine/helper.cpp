@@ -162,28 +162,36 @@ bool test_condition(Record::ptr record, const Condition& cond, int columnIndex)
     switch(cond.op)
     {
     case Condition::OP_EQ:
-        return compare(cd->typeEnum, data_a, data_b) == 0;
+        return data_a != nullptr && data_b != nullptr && compare(cd->typeEnum, data_a, data_b) == 0;
         break;
     case Condition::OP_NEQ:
-        return compare(cd->typeEnum, data_a, data_b) != 0;
+        return data_a != nullptr && data_b != nullptr && compare(cd->typeEnum, data_a, data_b) != 0;
         break;
     case Condition::OP_LT:
-        return compare(cd->typeEnum, data_a, data_b) < 0;
+        return data_a != nullptr && data_b != nullptr && compare(cd->typeEnum, data_a, data_b) < 0;
         break;
     case Condition::OP_GT:
-        return compare(cd->typeEnum, data_a, data_b) > 0;
+        return data_a != nullptr && data_b != nullptr && compare(cd->typeEnum, data_a, data_b) > 0;
         break;
     case Condition::OP_LE:
-        return compare(cd->typeEnum, data_a, data_b) <= 0;
+        return data_a != nullptr && data_b != nullptr && compare(cd->typeEnum, data_a, data_b) <= 0;
         break;
     case Condition::OP_GE:
-        return compare(cd->typeEnum, data_a, data_b) >= 0;
+        return data_a != nullptr && data_b != nullptr && compare(cd->typeEnum, data_a, data_b) >= 0;
         break;
     case Condition::OP_IS_NULL:
         return data_a == nullptr;
         break;
     case Condition::OP_NOT_NULL:
         return data_a != nullptr;
+        break;
+    case Condition::OP_LIKE:
+        {
+            assert(cond.expr.expr_type == Expr::EXPR_VALUE);
+            assert(cond.expr.value.value_type == Value::VALUE_REGEXP);
+            string str((char*)data_a->data(), data_a->size());
+            return data_a != nullptr && data_b != nullptr && regex_match(str.begin(), str.end(), cond.expr.value.reg);
+        }
         break;
     default: assert(false);
     }
@@ -267,6 +275,9 @@ int calculate_condition_count(TableDesc::ptr td, const Condition& cond)
         } else if (cond.op == Condition::OP_GE)
         {
             if (cd->indexed) return column_indices->TotalCount() - column_indices->LTCount(key);
+        } else if (cond.op == Condition::OP_LIKE)
+        {
+            // nothing
         } else {
             assert(false);
         }
@@ -394,6 +405,9 @@ vector<int> list_condition_rids(TableDesc::ptr td, const Condition& cond)
                 }
                 return ans;
             }
+        } else if (cond.op == Condition::OP_LIKE)
+        {
+            // nothing
         } else {
             assert(false);
         }

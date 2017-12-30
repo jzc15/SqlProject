@@ -88,6 +88,7 @@ SIMPLE_OPERATOR         (";"|"`"|"'"|"("|")"|","|"*"|".")
 "="                     { PRINT(EQ); return TOKEN(EQ);                  }
 "<"                     { PRINT(LT); return TOKEN(LT);                  }
 ">"                     { PRINT(GT); return TOKEN(GT);                  }
+"LIKE"                  { PRINT(LIKE); return TOKEN(LIKE);              }
 "AVG"                   { PRINT(AVG); return TOKEN(AVG);                }
 "SUM"                   { PRINT(SUM); return TOKEN(SUM);                }
 "MIN"                   { PRINT(MIN); return TOKEN(MIN);                }

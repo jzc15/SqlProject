@@ -65,6 +65,7 @@ void delete_op(Context* ctx, const string& tb_name, vector<Condition> conditions
                 return;
             }
         }
+        if (cond.op == Condition::OP_LIKE) cond.expr.value.string_to_regexp();
     }
 
     vector<int> rids = list_conditions_rids(td, conditions);
@@ -91,6 +92,7 @@ void update_op(Context* ctx, const string& tb_name, vector<Assignment> assignmen
                 return;
             }
         }
+        if (cond.op == Condition::OP_LIKE) cond.expr.value.string_to_regexp();
     }
     for(auto& assign: assignments)
     {
@@ -176,6 +178,7 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
                 return;
             }
         }
+        if (cond.op == Condition::OP_LIKE) cond.expr.value.string_to_regexp();
     }
 
     // sort tables

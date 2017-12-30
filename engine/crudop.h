@@ -11,6 +11,8 @@
 #include <iomanip>
 #include <ctime>
 #include <iostream>
+#include <regex>
+#include <algorithm>
 
 using namespace std;
 
@@ -18,10 +20,14 @@ using namespace std;
 class Value
 {
 public:
-    enum ValueType { VALUE_INT, VALUE_STRING, VALUE_FLOAT, VALUE_NULL, VALUE_DECIMAL /*定点数，只能转换*/ };
+    enum ValueType { VALUE_INT, VALUE_STRING, VALUE_FLOAT, VALUE_NULL,
+        VALUE_DECIMAL /*定点数，只能转换*/,
+        VALUE_REGEXP /*正则表达式，只能转换*/
+    };
     ValueType value_type;
     data_t data;
     string origin_value;
+    regex reg;
 
     static Value int_value(const string& value) {
         Value ans;
@@ -85,6 +91,16 @@ public:
         append(data, b);
         value_type = VALUE_DECIMAL;
     }
+    void string_to_regexp()
+    {
+        std::regex specialChars{ R"([-[\]{}()*+?.,\^$|#\s])" };
+        std::string sanitized = std::regex_replace(origin_value, specialChars, R"(\$&)");
+        size_t pos;
+        while((pos = sanitized.find("%")) != string::npos) sanitized.replace(pos, 1, ".*");
+        while((pos = sanitized.find("_")) != string::npos) sanitized.replace(pos, 1, ".");
+        reg = regex("^" + sanitized + "$");
+        value_type = VALUE_REGEXP;
+    }
 
     string stringify() const
     {
@@ -102,6 +118,9 @@ public:
             break;
         case VALUE_DECIMAL:
             sprintf(buf, "%d.%d", *(int*)(data->data()), *(int*)(data->data()+sizeof(int)));
+            break;
+        case VALUE_REGEXP:
+            return origin_value;
             break;
         case VALUE_NULL:
             return "NULL";
@@ -136,12 +155,13 @@ public:
 class Condition
 {
 public:
-    enum OP { OP_EQ, OP_NEQ, OP_LE, OP_GE, OP_LT, OP_GT, OP_IS_NULL, OP_NOT_NULL };
+    enum OP { OP_EQ, OP_NEQ, OP_LE, OP_GE, OP_LT, OP_GT, OP_IS_NULL, OP_NOT_NULL, OP_LIKE };
     Column column;
     OP op;
     Expr expr;
 
     static Condition expr_condition(const Column& column, OP op, const Expr& expr) { Condition ans; ans.column = column; ans.op = op; ans.expr = expr; return ans; }
+    static Condition like_condition(const Column& column, const string& pattern) { Condition ans; ans.column = column; ans.op = OP_LIKE; ans.expr = Expr::value_expr(Value::string_value(pattern)); return ans; }
     static Condition is_null_condition(const Column& column) { Condition ans; ans.column = column; ans.op = OP_IS_NULL; return ans; }
     static Condition not_null_condition(const Column& column) { Condition ans; ans.column = column; ans.op = OP_NOT_NULL; return ans; }
 
@@ -154,7 +174,7 @@ public:
         case OP_LT: op = OP_GT; break;
         case OP_GE: op = OP_LE; break;
         case OP_GT: op = OP_LT; break;
-        case OP_IS_NULL: case OP_NOT_NULL: assert(false);
+        case OP_IS_NULL: case OP_NOT_NULL: case OP_LIKE: assert(false);
         }
     }
 

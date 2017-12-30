@@ -44,7 +44,7 @@ using namespace std;
 %token SET SELECT IS PINT VARCHAR DESC INDEX AND
 %token DATE FLOAT FOREIGN REFERENCES DECIMAL
 %token IDENTIFIER VALUE_INT VALUE_STRING VALUE_FLOAT
-%token NEQ LE GE EQ LT GT
+%token NEQ LE GE EQ LT GT LIKE
 %token AVG SUM MIN MAX COUNT
 
 %type <str> dbName tbName colName IDENTIFIER VALUE_STRING VALUE_INT VALUE_FLOAT
@@ -350,6 +350,13 @@ whereClause     : col op expr
                     {
                         $$ = new Condition();
                         *$$ = Condition::expr_condition(*$1, $2, *$3);
+                        DELETE($1);
+                        DELETE($3);
+                    }
+                | col LIKE VALUE_STRING
+                    {
+                        $$ = new Condition();
+                        *$$ = Condition::like_condition(*$1, *$3);
                         DELETE($1);
                         DELETE($3);
                     }
