@@ -32,6 +32,8 @@ public:
     // 表列表
     vector<string> TableList();
 
+    void Finalize();
+
     void Save();
 
 private:

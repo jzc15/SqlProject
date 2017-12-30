@@ -68,13 +68,7 @@ void delete_op(Context* ctx, const string& tb_name, vector<Condition> conditions
     }
 
     vector<int> rids = list_conditions_rids(td, conditions);
-    SlotsFile::ptr file = make_shared<SlotsFile>(td->disk_filename);
-    for(auto rid : rids)
-    {
-        Record::ptr record = td->RecoverRecord(file->Fetch(rid));
-        file->Delete(rid);
-        remove_record_from_indices(record, rid);
-    }
+    delete_records(td, rids);
     cout << "deleted count : " << rids.size() << endl;
 }
 void update_op(Context* ctx, const string& tb_name, vector<Assignment> assignments, vector<Condition> conditions)

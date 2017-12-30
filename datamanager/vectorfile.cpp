@@ -53,7 +53,7 @@ vector_t VectorFile::Fetch(int pos)
 }
 int VectorFile::Save(int opos, vector_t data, bool append_only)
 {
-    vec_h_t* vec_h = (vec_h_t*)(file->ReadPage(opos/PAGE_SIZE, true)->data() + opos%PAGE_SIZE);
+    vec_h_t* vec_h = (vec_h_t*)(file->ReadPage(opos/PAGE_SIZE)->data() + opos%PAGE_SIZE);
     int pos = opos; // 原位置
 
     if (vec_h->capacity < (int)data->size())

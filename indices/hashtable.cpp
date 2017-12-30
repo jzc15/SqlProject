@@ -35,6 +35,7 @@ void HashTable::Insert(data_t key, int value)
         file = nullptr;
         rmfile(filename);
         cpfile(tmp_filename, filename);
+        rmfile(tmp_filename);
         file = make_shared<File>(filename);
         header = initTable(file, key_bytes);
 

@@ -61,6 +61,8 @@ void create_table(Context* ctx,
         c->SetForeignKey(foreign.ref_tb_name, foreign.ref_col_name);
     }
     td->Finalize();
+
+    ctx->dd->Finalize();
 }
 
 void drop_table(Context* ctx, const string& tb_name)
@@ -74,6 +76,8 @@ void drop_table(Context* ctx, const string& tb_name)
         if (c->indexed) BPlusTree::RemoveIndex(c->IndexFilename());
     }
     HashTable::RemoveIndex(td->PrimaryFilename());
+
+    ctx->dd->Finalize();
 }
 
 void desc_table(Context* ctx, const string& tb_name)

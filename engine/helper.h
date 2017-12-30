@@ -33,6 +33,8 @@ vector<int> list_conditions_rids(TableDesc::ptr td, const vector<Condition>& con
 void solve_column_tb_name(Context* ctx, const vector<string>& tables, Column& column);
 
 int search_in_primary(TableDesc::ptr td, data_t key);
-vector<int> search_in_oneof_primary(ColDesc::ptr td, data_t key);
+vector<int> search_in_oneof_primary(ColDesc::ptr cd, data_t key);
+
+void delete_records(TableDesc::ptr td, const vector<int>& rids);
 
 #endif // ENGINE_HELPER_H

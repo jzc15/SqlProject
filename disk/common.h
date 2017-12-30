@@ -46,5 +46,6 @@ void append(data_t data, T value)
         data->push_back(buf[i]);
 }
 void debug(data_t data);
+void debug(uint8* data, int len);
 
 #endif // DISK_COMMON_H

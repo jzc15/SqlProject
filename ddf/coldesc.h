@@ -6,6 +6,7 @@
 #include <json11.hpp>
 #include <map>
 #include <memory>
+#include <vector>
 #include "typeinfo.h"
 
 using namespace std;
@@ -38,6 +39,8 @@ public:
 
     bool is_only_primary; // 是否是唯一的主键
     bool has_multi_primary_hash; // 是否有可重的主键
+    vector<string> be_refed_tbs; // 被引用的表
+    vector<int> be_refed_col_idx; // 被引用的列
 
     ColDesc(TableDesc* td, const string& columnName, const string& typeName, size_t length, bool allow_null);
     ColDesc(TableDesc* td, const Json& info); // 从json中载入

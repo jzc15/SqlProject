@@ -27,6 +27,8 @@ DBDesc::DBDesc(const string& databaseName, const string& storagePath)
     {
         tables[iter.first] = make_shared<TableDesc>(this, iter.first, storagePath, iter.second);
     }
+
+    Finalize();
 }
 
 DBDesc::~DBDesc()
@@ -63,6 +65,32 @@ vector<string> DBDesc::TableList()
         rst.push_back(it->first);
     }
     return rst;
+}
+
+void DBDesc::Finalize()
+{
+    for(auto x : tables)
+    {
+        for(auto col : x.second->cols)
+        {
+            col->be_refed_tbs.clear();
+            col->be_refed_col_idx.clear();
+        }
+    }
+    for(auto x : tables)
+    {
+        for(int i = 0; i < (int)x.second->cols.size(); i ++)
+        {
+            auto col = x.second->cols[i];
+            if (col->is_foreign_key)
+            {
+                auto td = SearchTable(col->foreign_tb_name);
+                auto cd = td->Column(col->foreign_col_name);
+                cd->be_refed_tbs.push_back(x.first);
+                cd->be_refed_col_idx.push_back(i);
+            }
+        }
+    }
 }
 
 void DBDesc::Save()

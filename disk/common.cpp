@@ -148,10 +148,15 @@ string get_cwd()
 
 void debug(data_t data)
 {
+    debug(data->data(), data->size());
+}
+
+void debug(uint8* data, int len)
+{
     static char* HEX = "0123456789ABCDEF";
-    for(int i = 0; i < (int)data->size(); i ++)
+    for(int i = 0; i < len; i ++)
     {
-        cout << HEX[data->data()[i]>>4] << HEX[data->data()[i]&15] << " ";
+        cout << HEX[data[i]>>4] << HEX[data[i]&15] << " ";
     }
     cout << endl;
 }

@@ -75,6 +75,10 @@ void TableDesc::Finalize()
             if (cols[i]->is_oneof_primary)
                 cols[i]->has_multi_primary_hash = true;
     }
+    for(int i = 0; i < (int)cols.size(); i ++)
+    {
+        cols[i]->has_multi_primary_hash |= cols[i]->is_foreign_key;
+    }
 }
 
 Record::ptr TableDesc::NewRecord()

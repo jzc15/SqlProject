@@ -477,7 +477,6 @@ int search_in_primary(TableDesc::ptr td, data_t key)
 
 vector<int> search_in_oneof_primary(ColDesc::ptr cd, data_t key)
 {
-    assert(cd->is_oneof_primary);
     vector<int> ans;
     if (cd->is_only_primary)
     {
@@ -496,4 +495,32 @@ vector<int> search_in_oneof_primary(ColDesc::ptr cd, data_t key)
         assert(false);
     }
     return ans;
+}
+
+void delete_records(TableDesc::ptr td, const vector<int>& rids)
+{
+    SlotsFile::ptr file = make_shared<SlotsFile>(td->disk_filename);
+    for(auto rid : rids)
+    {
+        Record::ptr record = td->RecoverRecord(file->Fetch(rid));
+
+        for(int i = 0; i < (int)record->td->cols.size(); i ++)
+        {
+            auto cd = record->td->cols[i];
+            if (cd->is_only_primary && cd->be_refed_tbs.size() > 0u)
+            {
+                for(int j = 0; j < (int)cd->be_refed_tbs.size(); j ++)
+                {
+                    auto be_refed_td = td->dd->SearchTable(cd->be_refed_tbs[j]);
+                    auto be_refed_cd = be_refed_td->Column(cd->be_refed_col_idx[j]);
+                    vector<int> be_refed_rids = search_in_oneof_primary(be_refed_cd, record->GetValue(i));
+
+                    delete_records(be_refed_td, be_refed_rids);
+                }
+            }
+        }
+
+        file->Delete(rid);
+        remove_record_from_indices(record, rid);
+    }
 }

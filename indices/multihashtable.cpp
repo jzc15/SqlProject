@@ -40,8 +40,10 @@ void MultiHashTable::Insert(data_t key, int value)
         data_file = nullptr;
         rmfile(filename);
         cpfile(tmp_filename, filename);
+        rmfile(tmp_filename);
         rmfile(filename + ".data");
         cpfile(tmp_filename + ".data", filename + ".data");
+        rmfile(tmp_filename + ".data");
         file = make_shared<File>(filename);
         data_file = make_shared<VectorFile>(filename + ".data");
         header = initTable(file, key_bytes);
