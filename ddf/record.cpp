@@ -79,6 +79,10 @@ data_t Record::Generate()
                     case DATE_ENUM:
                         *(time_t*)(ptr+offset) = *(time_t*)(values[i]->data());
                         break;
+                    case DECIMAL_ENUM:
+                        *(int*)(ptr+offset) = *(int*)(values[i]->data());
+                        *(int*)(ptr+offset+sizeof(int)) = *(int*)(values[i]->data()+sizeof(int));
+                        break;
                     default:
                         assert(false);
                         break;
@@ -154,6 +158,10 @@ void Record::Recover(data_t data)
                 case DATE_ENUM:
                     values[i] = time_data(*(time_t*)(ptr+offset));
                     break;
+                case DECIMAL_ENUM:
+                    values[i] = int_data(*(int*)(ptr+offset));
+                    append(values[i], *(int*)(ptr+offset+sizeof(int)));
+                    break;
                 default: assert(false); break;
             }
             offset += col->size;
@@ -226,6 +234,9 @@ void Record::SetValue(int columnIndex, data_t data)
         break;
     case DATE_ENUM:
         assert(data->size() == sizeof(time_t));
+        break;
+    case DECIMAL_ENUM:
+        assert(data->size() == 8);
         break;
     default:
         assert(false);

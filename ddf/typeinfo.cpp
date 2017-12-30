@@ -1,6 +1,10 @@
 #include "typeinfo.h"
 #include <map>
 #include <cassert>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 
 using namespace std;
 
@@ -9,7 +13,8 @@ static map<string, size_t> typeSize = {
     {CHAR_TYPE, 1},
     {VARCHAR_TYPE, 1},
     {DATE_TYPE, sizeof(time_t)},
-    {FLOAT_TYPE, 8}
+    {FLOAT_TYPE, 4},
+    {DECIMAL_TYPE, 8}
 };
 size_t type_size(const string& typeName)
 {
@@ -22,7 +27,8 @@ static map<string, bool> typeFixed = {
     {CHAR_TYPE, true},
     {VARCHAR_TYPE, false},
     {DATE_TYPE, true},
-    {FLOAT_TYPE, true}
+    {FLOAT_TYPE, true},
+    {DECIMAL_TYPE, true}
 };
 bool is_type_fixed(const string& typeName)
 {
@@ -35,7 +41,8 @@ static map<string, int> typeEnum = {
     {CHAR_TYPE, CHAR_ENUM},
     {VARCHAR_TYPE, VARCHAR_ENUM},
     {DATE_TYPE, DATE_ENUM},
-    {FLOAT_TYPE, FLOAT_ENUM}
+    {FLOAT_TYPE, FLOAT_ENUM},
+    {DECIMAL_TYPE, DECIMAL_ENUM}
 };
 type_t type_enum(const string& typeName)
 {
@@ -48,7 +55,8 @@ static map<int, string> typeName = {
     {CHAR_ENUM, CHAR_TYPE},
     {VARCHAR_ENUM, VARCHAR_TYPE},
     {DATE_ENUM, DATE_TYPE},
-    {FLOAT_ENUM, FLOAT_TYPE}
+    {FLOAT_ENUM, FLOAT_TYPE},
+    {DECIMAL_ENUM, DECIMAL_TYPE}
 };
 string type_name(type_t type_enum)
 {
@@ -67,6 +75,13 @@ int compare(type_t type, data_t data_a, data_t data_b)
         return 
             *(float*)(data_a->data()) < *(float*)(data_b->data()) ? -1 : 
             (*(float*)(data_a->data()) == *(float*)(data_b->data()) ? 0 : 1);
+        break;
+    case DECIMAL_ENUM:
+        {
+            int* ad = (int*)data_a->data();
+            int* bd = (int*)data_b->data();
+            return (ad[0] == bd[0]) ? (ad[1] - bd[1]) : (ad[0]-bd[0]);
+        }
         break;
     case CHAR_ENUM: case VARCHAR_ENUM:
         for(int i = 0; i < (int)data_a->size() || i < (int)data_b->size(); i ++)
@@ -96,7 +111,14 @@ string stringify(type_t type, data_t data)
         sprintf(buf, "'%s'", string((char*)data->data(), data->size()).c_str());
         break;
     case DATE_ENUM:
-        sprintf(buf, "%d", *(time_t*)(data->data()));
+        {
+            std::stringstream ss;
+            ss << std::put_time(std::localtime((time_t*)(data->data())), "%Y-%m-%d");
+            return ss.str();
+        }
+        break;
+    case DECIMAL_ENUM:
+        sprintf(buf, "%d.%09d", *(int*)(data->data()), *(int*)(data->data()+sizeof(int)));
         break;
     default: assert(false);
     }

@@ -79,7 +79,7 @@ MultiHashTable::header_t* MultiHashTable::initTable(File::ptr file, int key_byte
     } else {
         header->valid = 1;
         header->key_bytes = key_bytes;
-        header->P = 67;
+        header->P = 241;
         header->M = nextPrime(1024);
         // header->M = nextPrime(1);
         header->size = 0;

@@ -17,8 +17,6 @@ using namespace std;
 
 %union {
     std::string* str;
-    int int_value;
-    float float_value;
     int token;
     Statement* stmt;
     vector<CreateTable::Field>* fields;
@@ -44,13 +42,11 @@ using namespace std;
 %token KEY NOT TNULL INSERT INTO VALUES
 %token DELETE FROM WHERE UPDATE
 %token SET SELECT IS PINT VARCHAR DESC INDEX AND
-%token DATE FLOAT FOREIGN REFERENCES
+%token DATE FLOAT FOREIGN REFERENCES DECIMAL
 %token IDENTIFIER VALUE_INT VALUE_STRING VALUE_FLOAT
 %token NEQ LE GE EQ LT GT
 
-%type <str> dbName tbName colName IDENTIFIER VALUE_STRING
-%type <int_value> VALUE_INT
-%type <float_value> VALUE_FLOAT
+%type <str> dbName tbName colName IDENTIFIER VALUE_STRING VALUE_INT VALUE_FLOAT
 %type <pro> program
 %type <stmt> stmt sysStmt dbStmt tbStmt idxStmt
 %type <field> field
@@ -260,11 +256,13 @@ columnList      : colName
 
 type            : PINT '(' VALUE_INT ')'
                     {
-                        $$ = new Type(INT_ENUM, $3);
+                        $$ = new Type(INT_ENUM, atoi($3->c_str()));
+                        DELETE($3);
                     }
                 | VARCHAR '(' VALUE_INT ')'
                     {
-                        $$ = new Type(VARCHAR_ENUM, $3);
+                        $$ = new Type(VARCHAR_ENUM, atoi($3->c_str()));
+                        DELETE($3);
                     }
                 | DATE
                     {
@@ -273,6 +271,10 @@ type            : PINT '(' VALUE_INT ')'
                 | FLOAT
                     {
                         $$ = new Type(FLOAT_ENUM);
+                    }
+                | DECIMAL '(' VALUE_INT ',' VALUE_INT ')'
+                    {
+                        $$ = new Type(DECIMAL_ENUM);
                     }
                 ;
 
@@ -307,7 +309,8 @@ valueList       : value
 value           : VALUE_INT
                     {
                         $$ = new Value();
-                        *$$ = Value::int_value($1);
+                        *$$ = Value::int_value(*$1);
+                        DELETE($1);
                     }
                 | VALUE_STRING
                     {
@@ -318,7 +321,8 @@ value           : VALUE_INT
                 | VALUE_FLOAT
                     {
                         $$ = new Value();
-                        *$$ = Value::float_value($1);
+                        *$$ = Value::float_value(*$1);
+                        DELETE($1);
                     }
                 | TNULL
                     {

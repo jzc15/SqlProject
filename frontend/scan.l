@@ -13,8 +13,6 @@ using namespace std;
 
 #define SAVE_TOKEN yylval.str = new std::string(yytext, yyleng);
 #define SAVE_TOKEN2 yylval.str = new std::string(yytext+1, yyleng-2)
-#define SAVE_INT { string x(yytext, yyleng); yylval.int_value = atoi(x.c_str()); }
-#define SAVE_FLOAT { string x(yytext, yyleng); yylval.float_value = atof(x.c_str()); }
 #define TOKEN(t) yylval.token = t
 #define PRINT(t) { \
     if (scan_debug) printf("[%s] %s\n", std::string(yytext, yyleng).c_str(), #t); \
@@ -81,6 +79,7 @@ SIMPLE_OPERATOR         (";"|"`"|"'"|"("|")"|","|"*"|".")
 "AND"                   { PRINT(AND); return TOKEN(AND);                }
 "DATE"                  { PRINT(DATE); return TOKEN(DATE);              }
 "FLOAT"                 { PRINT(FLOAT); return TOKEN(FLOAT);            }
+"DECIMAL"               { PRINT(DECIMAL); return TOKEN(DECIMAL);        }
 "FOREIGN"               { PRINT(FOREIGN); return TOKEN(FOREIGN);        }
 "REFERENCES"            { PRINT(REFERENCES); return TOKEN(REFERENCES);  }
 "<>"                    { PRINT(NEQ); return TOKEN(NEQ);                }
@@ -94,8 +93,8 @@ SIMPLE_OPERATOR         (";"|"`"|"'"|"("|")"|","|"*"|".")
 {WHITESPACE}            { /*skip*/                                                      }
 {IDENTIFIER}            { SAVE_TOKEN; PRINT(IDENTIFIER); return IDENTIFIER;             }
 {IDENTIFIER2}           { SAVE_TOKEN2; PRINT(IDENTIFIER); return IDENTIFIER;            }
-{VALUE_FLOAT}           { SAVE_FLOAT; PRINT(VALUE_FLOAT); return VALUE_FLOAT;           }
-{VALUE_INT}             { SAVE_INT; PRINT(VALUE_INT); return VALUE_INT;                 }
+{VALUE_FLOAT}           { SAVE_TOKEN; PRINT(VALUE_FLOAT); return VALUE_FLOAT;           }
+{VALUE_INT}             { SAVE_TOKEN; PRINT(VALUE_INT); return VALUE_INT;               }
 {VALUE_STRING}          { SAVE_TOKEN2; PRINT(VALUE_STRING); return VALUE_STRING;        }
 {SIMPLE_OPERATOR}       { return yytext[0];                                             }
 

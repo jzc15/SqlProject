@@ -77,6 +77,18 @@ bool value_type_trans_ok(type_t type, Value& value)
         } else {
             return false;
         }
+    case DECIMAL_ENUM:
+        if (value.value_type == Value::VALUE_INT)
+        {
+            value.int_to_decimal();
+            return true;
+        } else if (value.value_type == Value::VALUE_FLOAT)
+        {
+            value.float_to_decimal();
+            return true;
+        } else {
+            return false;
+        }
     default:
         assert(false);
     }

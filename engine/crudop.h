@@ -5,6 +5,7 @@
 #include "context.h"
 #include <disk/common.h>
 #include <cstdio>
+#include <cstdlib>
 #include <cassert>
 #include <sstream>
 #include <iomanip>
@@ -17,14 +18,38 @@ using namespace std;
 class Value
 {
 public:
-    enum ValueType { VALUE_INT, VALUE_STRING, VALUE_FLOAT, VALUE_NULL };
+    enum ValueType { VALUE_INT, VALUE_STRING, VALUE_FLOAT, VALUE_NULL, VALUE_DECIMAL /*定点数，只能转换*/ };
     ValueType value_type;
     data_t data;
+    string origin_value;
 
-    static Value int_value(int value) { Value ans; ans.value_type = VALUE_INT; ans.data = int_data(value); return ans; }
-    static Value float_value(float value) { Value ans; ans.value_type = VALUE_FLOAT; ans.data = float_data(value); return ans; }
-    static Value string_value(const string& value) { Value ans; ans.value_type = VALUE_STRING; ans.data = string_data(value); return ans; }
-    static Value null_value() { Value ans; ans.value_type = VALUE_NULL; ans.data = nullptr; return ans; }
+    static Value int_value(const string& value) {
+        Value ans;
+        ans.value_type = VALUE_INT;
+        ans.data = int_data(atoi(value.c_str()));
+        ans.origin_value = value;
+        return ans;
+    }
+    static Value float_value(const string& value) {
+        Value ans;
+        ans.value_type = VALUE_FLOAT;
+        ans.data = float_data(atof(value.c_str()));
+        ans.origin_value = value;
+        return ans;
+    }
+    static Value string_value(const string& value) {
+        Value ans;
+        ans.value_type = VALUE_STRING;
+        ans.data = string_data(value);
+        ans.origin_value = value;
+        return ans;
+    }
+    static Value null_value() {
+        Value ans;
+        ans.value_type = VALUE_NULL;
+        ans.data = nullptr;
+        return ans;
+    }
     
     void string_to_date()
     {
@@ -42,6 +67,24 @@ public:
         *(float*)data->data() = value;
         value_type = VALUE_FLOAT;
     }
+    void float_to_decimal()
+    {
+        char bbuf[20] = {0};
+        int a, b;
+        sscanf(origin_value.c_str(), "%d.%s", &a, bbuf);
+        while(strlen(bbuf) < 9) bbuf[strlen(bbuf)] = '0';
+        b = atoi(bbuf);
+        data = int_data(a);
+        append(data, b);
+        value_type = VALUE_DECIMAL;
+    }
+    void int_to_decimal()
+    {
+        int a = atoi(origin_value.c_str()), b = 0;
+        data = int_data(a);
+        append(data, b);
+        value_type = VALUE_DECIMAL;
+    }
 
     string stringify() const
     {
@@ -56,6 +99,9 @@ public:
             break;
         case VALUE_FLOAT:
             sprintf(buf, "%f", *(float*)(data->data()));
+            break;
+        case VALUE_DECIMAL:
+            sprintf(buf, "%d.%d", *(int*)(data->data()), *(int*)(data->data()+sizeof(int)));
             break;
         case VALUE_NULL:
             return "NULL";

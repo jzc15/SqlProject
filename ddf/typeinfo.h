@@ -22,13 +22,15 @@ using namespace std;
 #define VARCHAR_TYPE ("varchar")
 #define DATE_TYPE ("date") // DATE储存为int
 #define FLOAT_TYPE ("float")
+#define DECIMAL_TYPE ("decimal") // 定点数，两个int，9位
 
 enum type_t {
     INT_ENUM = 0,
     CHAR_ENUM,
     VARCHAR_ENUM,
     DATE_ENUM,
-    FLOAT_ENUM
+    FLOAT_ENUM,
+    DECIMAL_ENUM,
 };
 
 size_t type_size(const string& typeName); // 该类型单个元素的大小
