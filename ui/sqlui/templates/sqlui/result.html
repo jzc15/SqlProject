@@ -1,0 +1,73 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0"/>
+  <title>login - Materialize</title>
+
+  <!-- CSS  -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="/static/materialize/css/materialize.min.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+  <link href="css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+</head>
+<body>
+  <nav class="light-green lighten-1" role="navigation">
+    <div class="nav-wrapper container"><a id="logo-container" href="#" class="brand-logo"></a>
+      <ul class="left hide-on-med-and-down">
+        <li>{{dir}}</li>
+      </ul>
+  </nav>
+
+<div class="section no-pad-bot" id="index-banner">
+    <div class="container">
+      <br><br>
+      
+      <div class="row center">
+          <form action="/database/addsql" method="get">
+            <div class="row">
+              <form class="col s12">
+                <div class="row">
+                  <div class="input-field col s4 offset-s2">
+                    <textarea placeholder="请输入sql语句" id="sql" type="text" class="materialize-textarea">
+                      </textarea>
+                      <label for="sql">请输入sql语句</label>
+                  </div>
+                  <div class="input-field col s4">
+                    <button class="btn waves-effect waves-light" type="submit">submit
+                    </button>
+                  </div>
+                </div>
+            </div>
+            </form>
+        </div>
+        {% for g in tbgroup %}
+        <table class="striped">
+            <thead>
+                <tr>
+                {% for i in g.thead %}
+                    <th>{{i}}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+                {% for i in g.tbinfo %}
+                <tr>
+                    {% for j in i.tbitem %}
+                      <th>{{j}}</th>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            <br><br>
+              {% endfor %}
+    </div>
+  </div>
+  <!--  Scripts-->
+  <script src="/static/materialize/js/jquery-3.2.0.min.js"></script>
+  <script src="/static/materialize/js/materialize.js"></script>
+  <script src="js/init.js"></script>
+
+  </body>
+</html>

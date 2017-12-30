@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0" />
+  <title>index</title>
+
+  <!-- CSS  -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="/static/materialize/css/materialize.min.css" type="text/css" rel="stylesheet" media="screen,projection" />
+  <link href="css/style.css" type="text/css" rel="stylesheet" media="screen,projection" />
+</head>
+
+<body>
+  <nav class="light-green lighten-1" role="navigation">
+    <div class="nav-wrapper container">
+      <a id="logo-container" href="#" class="brand-logo"></a>
+      <ul class="left hide-on-med-and-down">
+        <li>{{dir}}</li>
+      </ul>
+  </nav>
+
+  <div class="section no-pad-bot" id="index-banner">
+    <div class="container">
+      <br>
+      <br>
+
+      <div class="row center">
+        <form action="/database/adddatabase" method="get">
+          <div class="row">
+            <form class="col s12">
+              <div class="row">
+                <div class="input-field col s4 offset-s2">
+                  <input placeholder="请输入sql语句" id="sql" type="text" class="validate">
+                </div>
+                <div class="input-field col s4">
+                  <button class="btn waves-effect waves-light" type="submit">Add
+                  </button>
+                </div>
+              </div>
+          </div>
+          </form>
+      </div>
+      <br>
+      <br>
+
+      <ul class="collection with-header">
+        <li class="collection-header">
+          <h5>All Database:</h5>
+        </li>
+        {% for i in dblist %}
+        <a href="/database/deldatabase?databaseName={{i}}" class="secondary-content">
+          <!-- !-->
+          <span class="badge">
+            <i class="material-icons red-text">-</i>
+          </span>
+        </a>
+        <a href="/database/database?databaseName={{i}}" class="collection-item">
+          {{i}}
+
+        </a>
+        {% endfor %}
+
+        </a>
+      </ul>
+    </div>
+  </div>
+  <!--  Scripts-->
+  <script src="/static/materialize/js/jquery-3.2.0.min.js"></script>
+  <script src="/static/materialize/js/materialize.js"></script>
+  <script src="js/init.js"></script>
+
+</body>
+
+</html>
