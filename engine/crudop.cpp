@@ -146,12 +146,17 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
             solve_column_tb_name(ctx, tables, cond.expr.column);
         }
     }
+    // solve selector's column tb_name
     if (selector.selector_type == Selector::SELECT_COLUMNS)
     {
         for(auto& ccolumn : selector.columns)
         {
             solve_column_tb_name(ctx, tables, ccolumn);
         }
+    }
+    if (selector.has_query_column)
+    {
+        solve_column_tb_name(ctx, tables, selector.query_column);
     }
 
     // type check
@@ -310,6 +315,11 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
     vector<int> output_record_idx;
     vector<int> output_record_col_idx;
     vector<type_t> output_types;
+    // 聚合查询
+    string output_aggregate_title;
+    int output_aggregate_tb_idx;
+    int output_aggregate_col_idx;
+    type_t output_aggregate_type;
     if (selector.selector_type == Selector::SELECT_ALL)
     {
         for(int i = 0; i < (int)tds.size(); i ++)
@@ -324,7 +334,7 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
                 output_types.push_back(cd->typeEnum);
             }
         }
-    } else {
+    } else if (selector.selector_type == Selector::SELECT_COLUMNS) {
         for(const auto& c : selector.columns)
         {
             int i = tables_idx[c.tb_name];
@@ -336,34 +346,98 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
             output_record_col_idx.push_back(j);
             output_types.push_back(cd->typeEnum);
         }
+    } else if (selector.selector_type == Selector::SELECT_AVG) {
+        output_aggregate_title = "AVG( `" + selector.query_column.tb_name + "`.`" + selector.query_column.col_name + "`)";
+        int i = output_aggregate_tb_idx = tables_idx[selector.query_column.tb_name];
+        output_aggregate_col_idx = tds[i]->ColumnIndex(selector.query_column.col_name);
+        output_aggregate_type = tds[i]->Column(selector.query_column.col_name)->typeEnum;
+        if (output_aggregate_type != INT_ENUM && output_aggregate_type != FLOAT_ENUM)
+        {
+            cerr << "AVG query should only be apply for int|float type" << endl;
+            assert(false);
+        }
+    } else if (selector.selector_type == Selector::SELECT_SUM) {
+        output_aggregate_title = "SUM( `" + selector.query_column.tb_name + "`.`" + selector.query_column.col_name + "`)";
+        int i = output_aggregate_tb_idx = tables_idx[selector.query_column.tb_name];
+        output_aggregate_col_idx = tds[i]->ColumnIndex(selector.query_column.col_name);
+        output_aggregate_type = tds[i]->Column(selector.query_column.col_name)->typeEnum;
+        if (output_aggregate_type != INT_ENUM && output_aggregate_type != FLOAT_ENUM)
+        {
+            cerr << "SUM query should only be apply for int|float type" << endl;
+            assert(false);
+        }
+    } else if (selector.selector_type == Selector::SELECT_MIN) {
+        output_aggregate_title = "MIN( `" + selector.query_column.tb_name + "`.`" + selector.query_column.col_name + "`)";
+        int i = output_aggregate_tb_idx = tables_idx[selector.query_column.tb_name];
+        output_aggregate_col_idx = tds[i]->ColumnIndex(selector.query_column.col_name);
+        output_aggregate_type = tds[i]->Column(selector.query_column.col_name)->typeEnum;
+    } else if (selector.selector_type == Selector::SELECT_MAX) {
+        output_aggregate_title = "MAX( `" + selector.query_column.tb_name + "`.`" + selector.query_column.col_name + "`)";
+        int i = output_aggregate_tb_idx = tables_idx[selector.query_column.tb_name];
+        output_aggregate_col_idx = tds[i]->ColumnIndex(selector.query_column.col_name);
+        output_aggregate_type = tds[i]->Column(selector.query_column.col_name)->typeEnum;
+    } else if (selector.selector_type == Selector::SELECT_COUNT) {
+        output_aggregate_title = "COUNT(*)";
+    } else {
+        assert(false);
     }
 
     // search records pairs
     vector<Record::ptr> current_records(tables.size()); // 当前每个表的记录
     vector<SlotsFile::ptr> files(tables.size()); // 每个表的磁盘文件
     for(int i = 0; i < (int)tables.size(); i ++) files[i] = make_shared<SlotsFile>(tds[i]->disk_filename);
+    data_t aggregate_data = nullptr; // 当前的聚合查询结果
     int selected_count = 0;
     std::function<void(int)> select;
     select = [&](int table_idx) {
         if (table_idx >= (int)tables.size())
         {
             // new record
-            if (selected_count % 10 == 0)
+            if (!selector.is_aggregate_query)
             {
-                cout << endl;
+                if (selected_count % 10 == 0)
+                {
+                    cout << endl;
+                    for(int i = 0; i < (int)output_titles.size(); i ++)
+                    {
+                        if (i) cout << " : ";
+                        cout << output_titles[i];
+                    }
+                    cout << endl;
+                }
                 for(int i = 0; i < (int)output_titles.size(); i ++)
                 {
                     if (i) cout << " : ";
-                    cout << output_titles[i];
+                    cout << stringify(output_types[i], current_records[output_record_idx[i]]->GetValue(output_record_col_idx[i]));
                 }
                 cout << endl;
+            } else {
+                data_t value = nullptr;
+                if (selector.has_query_column)
+                    value = current_records[output_aggregate_tb_idx]->GetValue(output_aggregate_col_idx);
+                if (selector.selector_type == Selector::SELECT_AVG)
+                {
+                    if (aggregate_data == nullptr) aggregate_data = value;
+                    else aggregate_data = add(output_aggregate_type, aggregate_data, value);
+                } else if (selector.selector_type == Selector::SELECT_SUM)
+                {
+                    if (aggregate_data == nullptr) aggregate_data = value;
+                    else aggregate_data = add(output_aggregate_type, aggregate_data, value);
+                } else if (selector.selector_type == Selector::SELECT_MIN)
+                {
+                    if (aggregate_data == nullptr) aggregate_data = value;
+                    else if (compare(output_aggregate_type, aggregate_data, value) > 0) aggregate_data = value;
+                } else if (selector.selector_type == Selector::SELECT_MAX)
+                {
+                    if (aggregate_data == nullptr) aggregate_data = value;
+                    else if (compare(output_aggregate_type, aggregate_data, value) < 0) aggregate_data = value;
+                } else if (selector.selector_type == Selector::SELECT_COUNT)
+                {
+                    // nothing
+                } else {
+                    assert(false);
+                }
             }
-            for(int i = 0; i < (int)output_titles.size(); i ++)
-            {
-                if (i) cout << " : ";
-                cout << stringify(output_types[i], current_records[output_record_idx[i]]->GetValue(output_record_col_idx[i]));
-            }
-            cout << endl;
             selected_count ++;
             return;
         }
@@ -412,5 +486,21 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
         }
     };
     select(0);
+
+    if (selector.is_aggregate_query)
+    {
+        if (aggregate_data != nullptr && selector.selector_type == Selector::SELECT_AVG)
+            aggregate_data = div(output_aggregate_type, aggregate_data, selected_count);
+        cout << output_aggregate_title << endl;
+        if (selector.has_query_column)
+        {
+            cout << stringify(output_aggregate_type, aggregate_data) << endl;
+        } else if (selector.selector_type == Selector::SELECT_COUNT) {
+            cout << selected_count << endl;
+        } else {
+            assert(false);
+        }
+    }
+
     cout << "selected count : " << selected_count << endl;
 }

@@ -1,5 +1,5 @@
-CREATE DATABASE test_db;
-USE test_db;
+CREATE DATABASE test_decimal;
+USE test_decimal;
 
 CREATE TABLE test (id INT(10), flt FLOAT, deci DECIMAL(2, 2));
 

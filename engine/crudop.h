@@ -176,12 +176,67 @@ public:
 class Selector
 {
 public:
-    enum SelectorType { SELECT_ALL, SELECT_COLUMNS };
-    SelectorType selector_type;
-    vector<Column> columns;
+    enum SelectorType { SELECT_ALL, SELECT_COLUMNS, SELECT_AVG, SELECT_SUM, SELECT_MIN, SELECT_MAX, SELECT_COUNT };
+    SelectorType selector_type; // 查询类型
+    vector<Column> columns; // 查询的列
+    bool is_aggregate_query; // 是否是聚合类型
+    bool has_query_column;
+    Column query_column; // 聚合类型的查询列
 
-    static Selector all_selector() { Selector ans; ans.selector_type = SELECT_ALL; return ans; }
-    static Selector columns_selector(const vector<Column>& columns) { Selector ans; ans.selector_type = SELECT_COLUMNS; ans.columns = columns; return ans; }
+    static Selector all_selector() {
+        Selector ans;
+        ans.selector_type = SELECT_ALL;
+        ans.is_aggregate_query = false;
+        ans.has_query_column = false;
+        return ans;
+    }
+    static Selector columns_selector(const vector<Column>& columns) {
+        Selector ans;
+        ans.selector_type = SELECT_COLUMNS;
+        ans.columns = columns;
+        ans.is_aggregate_query = false;
+        ans.has_query_column = false;
+        return ans;
+    }
+    static Selector avg_selector(const Column& column) {
+        Selector ans;
+        ans.selector_type = SELECT_AVG;
+        ans.query_column = column;
+        ans.is_aggregate_query = true;
+        ans.has_query_column = true;
+        return ans;
+    }
+    static Selector sum_selector(const Column& column) {
+        Selector ans;
+        ans.selector_type = SELECT_SUM;
+        ans.query_column = column;
+        ans.is_aggregate_query = true;
+        ans.has_query_column = true;
+        return ans;
+    }
+    static Selector min_selector(const Column& column) {
+        Selector ans;
+        ans.selector_type = SELECT_MIN;
+        ans.query_column = column;
+        ans.is_aggregate_query = true;
+        ans.has_query_column = true;
+        return ans;
+    }
+    static Selector max_selector(const Column& column) {
+        Selector ans;
+        ans.selector_type = SELECT_MAX;
+        ans.query_column = column;
+        ans.is_aggregate_query = true;
+        ans.has_query_column = true;
+        return ans;
+    }
+    static Selector count_selector() {
+        Selector ans;
+        ans.selector_type = SELECT_COUNT;
+        ans.is_aggregate_query = true;
+        ans.has_query_column = false;
+        return ans;
+    }
 };
 
 void insert_op(Context* ctx, const string& tb_name, vector<vector<Value> > values_list);

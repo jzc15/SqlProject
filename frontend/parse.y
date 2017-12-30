@@ -45,6 +45,7 @@ using namespace std;
 %token DATE FLOAT FOREIGN REFERENCES DECIMAL
 %token IDENTIFIER VALUE_INT VALUE_STRING VALUE_FLOAT
 %token NEQ LE GE EQ LT GT
+%token AVG SUM MIN MAX COUNT
 
 %type <str> dbName tbName colName IDENTIFIER VALUE_STRING VALUE_INT VALUE_FLOAT
 %type <pro> program
@@ -448,6 +449,35 @@ selector        : '*'
                     {
                         $$ = new Selector();
                         *$$ = Selector::all_selector();
+                    }
+                |   AVG '(' col ')'
+                    {
+                        $$ = new Selector();
+                        *$$ = Selector::avg_selector(*$3);
+                        DELETE($3);
+                    }
+                |   SUM '(' col ')'
+                    {
+                        $$ = new Selector();
+                        *$$ = Selector::sum_selector(*$3);
+                        DELETE($3);
+                    }
+                |   MIN '(' col ')'
+                    {
+                        $$ = new Selector();
+                        *$$ = Selector::min_selector(*$3);
+                        DELETE($3);
+                    }
+                |   MAX '(' col ')'
+                    {
+                        $$ = new Selector();
+                        *$$ = Selector::max_selector(*$3);
+                        DELETE($3);
+                    }
+                |   COUNT '(' '*' ')'
+                    {
+                        $$ = new Selector();
+                        *$$ = Selector::count_selector();
                     }
                 | colSelector
                     {

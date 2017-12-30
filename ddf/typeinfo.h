@@ -41,6 +41,12 @@ string type_name(type_t type_enum);
 // return a - b;
 int compare(type_t type, data_t data_a, data_t data_b);
 
+// a + b
+data_t add(type_t type, data_t data_a, data_t data_b);
+
+// data / n
+data_t div(type_t type, data_t data, int n);
+
 string stringify(type_t type, data_t data);
 
 #endif // _TYPE_INFO_H

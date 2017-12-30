@@ -96,6 +96,34 @@ int compare(type_t type, data_t data_a, data_t data_b)
     }
 }
 
+data_t add(type_t type, data_t data_a, data_t data_b)
+{
+    switch(type)
+    {
+    case INT_ENUM:
+        return int_data(*(int*)(data_a->data()) + *(int*)(data_b->data()));
+        break;
+    case FLOAT_ENUM:
+        return float_data(*(float*)(data_a->data()) + *(float*)(data_b->data()));
+        break;
+    default: assert(false);
+    }
+}
+
+data_t div(type_t type, data_t data, int n)
+{
+    switch(type)
+    {
+    case INT_ENUM:
+        return int_data(*(int*)(data->data())/n);
+        break;
+    case FLOAT_ENUM:
+        return float_data(*(float*)(data->data())/n);
+        break;
+    default: assert(false);
+    }
+}
+
 string stringify(type_t type, data_t data)
 {
     char buf[1024];

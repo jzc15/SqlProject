@@ -88,6 +88,11 @@ SIMPLE_OPERATOR         (";"|"`"|"'"|"("|")"|","|"*"|".")
 "="                     { PRINT(EQ); return TOKEN(EQ);                  }
 "<"                     { PRINT(LT); return TOKEN(LT);                  }
 ">"                     { PRINT(GT); return TOKEN(GT);                  }
+"AVG"                   { PRINT(AVG); return TOKEN(AVG);                }
+"SUM"                   { PRINT(SUM); return TOKEN(SUM);                }
+"MIN"                   { PRINT(MIN); return TOKEN(MIN);                }
+"MAX"                   { PRINT(MAX); return TOKEN(MAX);                }
+"COUNT"                 { PRINT(COUNT); return TOKEN(COUNT);            }
 
 {NEWLINE}               { /*skip*/                                                      }
 {WHITESPACE}            { /*skip*/                                                      }
