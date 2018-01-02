@@ -15,6 +15,12 @@ int main(int argc, char* argv[])
             if (arg == "--scan_debug")
             {
                 scan_debug = true;
+            } else if (arg == "--debug_on")
+            {
+                debug_on = true;
+            } else if (arg == "--debug_off")
+            {
+                debug_on = false;
             } else {
                 cerr << "Unknow arg : " << arg << endl;
                 return 1;
@@ -25,7 +31,8 @@ int main(int argc, char* argv[])
     }
     if (files.size() == 0u)
     {
-        cout << "Usage : " << argv[0] << " [--scan_debug] [file1] [file1 ...]" << endl;
+        cerr << "Usage : " << argv[0] << " [--scan_debug] [--debug_on|--debug_off] file1" << endl;
+        return 1;
     }
 
     for(const auto& s : files)
@@ -35,7 +42,7 @@ int main(int argc, char* argv[])
             cout << "Scan file '" << s << "'" << endl;
             scanFile(s.c_str());
         } else {
-            cout << "Parse file '" << s << "'" << endl;
+            if (debug_on) cout << "Parse file '" << s << "'" << endl;
             Program* p = parseFile(s.c_str());
             p->run();
             delete p;

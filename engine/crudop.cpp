@@ -21,7 +21,7 @@ void insert_op(Context* ctx, const string& tb_name, vector<vector<Value> > value
         Record::ptr record = td->NewRecord();
         if (values.size() != td->cols.size())
         {
-            cerr << "ERROR AT INSERT : wrong num of values" << endl;
+            *err << "ERROR AT INSERT : wrong num of values" << endl;
             return;
         }
 
@@ -31,14 +31,14 @@ void insert_op(Context* ctx, const string& tb_name, vector<vector<Value> > value
             Value& v = values[i];
             if (!value_type_trans_ok(cd->typeEnum, v))
             {
-                cerr << "ERROR AT INSERT : wrong type for column `" << cd->columnName << "` : " << v.stringify() << endl;
+                *err << "ERROR AT INSERT : wrong type for column `" << cd->columnName << "` : " << v.stringify() << endl;
                 return;
             }
             record->SetValue(i, v.data);
         }
         if (!record_check_ok(record))
         {
-            cerr << "ERROR AT INSERT : wrong record" << endl;
+            *err << "ERROR AT INSERT : wrong record" << endl;
             return;
         }
         int rid = table_file->Insert(record->Generate());
@@ -56,12 +56,12 @@ void delete_op(Context* ctx, const string& tb_name, vector<Condition> conditions
             auto cd_a = td->Column(cond.column.col_name);
             if (cond.expr.expr_type == Expr::EXPR_COLUMN && cd_a->typeEnum != td->Column(cond.expr.column.col_name)->typeEnum)
             {
-                cerr << "ERROR AT DELETE : wrong type between column `" << cd_a->columnName << "` and column `" <<  td->Column(cond.expr.column.col_name)->columnName << "`" << endl;
+                *err << "ERROR AT DELETE : wrong type between column `" << cd_a->columnName << "` and column `" <<  td->Column(cond.expr.column.col_name)->columnName << "`" << endl;
                 return;
             }
             if (cond.expr.expr_type == Expr::EXPR_VALUE && !value_type_trans_ok(cd_a->typeEnum, cond.expr.value))
             {
-                cerr << "ERROR AT DELETE : wrong type for column `" << cd_a->columnName << "` : " << cond.expr.value.stringify() << endl;
+                *err << "ERROR AT DELETE : wrong type for column `" << cd_a->columnName << "` : " << cond.expr.value.stringify() << endl;
                 return;
             }
         }
@@ -70,7 +70,7 @@ void delete_op(Context* ctx, const string& tb_name, vector<Condition> conditions
 
     vector<int> rids = list_conditions_rids(td, conditions);
     delete_records(td, rids);
-    cout << "deleted count : " << rids.size() << endl;
+    if (debug_on) *out << "deleted count : " << rids.size() << endl;
 }
 void update_op(Context* ctx, const string& tb_name, vector<Assignment> assignments, vector<Condition> conditions)
 {
@@ -83,12 +83,12 @@ void update_op(Context* ctx, const string& tb_name, vector<Assignment> assignmen
             auto cd_a = td->Column(cond.column.col_name);
             if (cond.expr.expr_type == Expr::EXPR_COLUMN && cd_a->typeEnum != td->Column(cond.expr.column.col_name)->typeEnum)
             {
-                cerr << "ERROR AT UPDATE CONDITION : wrong type between column `" << cd_a->columnName << "` and column `" <<  td->Column(cond.expr.column.col_name)->columnName << "`" << endl;
+                *err << "ERROR AT UPDATE CONDITION : wrong type between column `" << cd_a->columnName << "` and column `" <<  td->Column(cond.expr.column.col_name)->columnName << "`" << endl;
                 return;
             }
             if (cond.expr.expr_type == Expr::EXPR_VALUE && !value_type_trans_ok(cd_a->typeEnum, cond.expr.value))
             {
-                cerr << "ERROR AT UPDATE CONDITION : wrong type for column `" << cd_a->columnName << "` : " << cond.expr.value.stringify() << endl;
+                *err << "ERROR AT UPDATE CONDITION : wrong type for column `" << cd_a->columnName << "` : " << cond.expr.value.stringify() << endl;
                 return;
             }
         }
@@ -99,7 +99,7 @@ void update_op(Context* ctx, const string& tb_name, vector<Assignment> assignmen
         auto cd = td->Column(assign.column);
         if (!value_type_trans_ok(cd->typeEnum, assign.value))
         {
-            cerr << "ERROR AT UPDATE SET : wrong type for column `" << cd->columnName << "` : " << assign.value.stringify() << endl;
+            *err << "ERROR AT UPDATE SET : wrong type for column `" << cd->columnName << "` : " << assign.value.stringify() << endl;
             return;
         }
     }
@@ -121,11 +121,11 @@ void update_op(Context* ctx, const string& tb_name, vector<Assignment> assignmen
             int nrid = file->Insert(new_record->Generate());
             insert_record_to_indices(new_record, nrid);
         } else {
-            cerr << "ERROR AT INSERT : wrong record" << endl;
+            *err << "ERROR AT INSERT : wrong record" << endl;
             return;
         }
     }
-    cout << "updated count : " << rids.size() << endl;
+    if (debug_on) *out << "updated count : " << rids.size() << endl;
 }
 void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Condition> conditions)
 {
@@ -135,7 +135,7 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
         for(int j = i+1; j < (int)tables.size(); j ++)
             if (tables[i] == tables[j])
             {
-                cerr << "ERROR AT SELECT : same table name `" << tables[i] << "`" << endl;
+                *err << "ERROR AT SELECT : same table name `" << tables[i] << "`" << endl;
                 return;
             }
 
@@ -169,12 +169,12 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
             auto cd_a = ctx->dd->SearchTable(cond.column.tb_name)->Column(cond.column.col_name);
             if (cond.expr.expr_type == Expr::EXPR_COLUMN && cd_a->typeEnum != ctx->dd->SearchTable(cond.expr.column.tb_name)->Column(cond.expr.column.col_name)->typeEnum)
             {
-                cerr << "ERROR AT UPDATE CONDITION : wrong type between column `" << cd_a->columnName << "` and column `" <<  ctx->dd->SearchTable(cond.expr.column.tb_name)->Column(cond.expr.column.col_name)->columnName << "`" << endl;
+                *err << "ERROR AT UPDATE CONDITION : wrong type between column `" << cd_a->columnName << "` and column `" <<  ctx->dd->SearchTable(cond.expr.column.tb_name)->Column(cond.expr.column.col_name)->columnName << "`" << endl;
                 return;
             }
             if (cond.expr.expr_type == Expr::EXPR_VALUE && !value_type_trans_ok(cd_a->typeEnum, cond.expr.value))
             {
-                cerr << "ERROR AT UPDATE CONDITION : wrong type for column `" << cd_a->columnName << "` : " << cond.expr.value.stringify() << endl;
+                *err << "ERROR AT UPDATE CONDITION : wrong type for column `" << cd_a->columnName << "` : " << cond.expr.value.stringify() << endl;
                 return;
             }
         }
@@ -248,12 +248,15 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
         }
 
         tables = new_tables;
-        cout << "table list : ";
-        for(const auto& tb : tables)
+        if (debug_on)
         {
-            cout << tb << " ";
+            *out << "table list : ";
+            for(const auto& tb : tables)
+            {
+                *out << tb << " ";
+            }
+            *out << endl;
         }
-        cout << endl;
     }
     map<string, int> tables_idx;
     for(int i = 0; i < (int)tables.size(); i ++) tables_idx[tables[i]] = i;
@@ -310,7 +313,7 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
                 }
             }
             table_records[i] = list_conditions_rids(tds[i], this_conds);
-            cout << "plain records : " << tables[i] << " conds size = " << this_conds.size() << " records size = " << table_records[i].size() << endl;
+            if (debug_on) *out << "plain records : " << tables[i] << " conds size = " << this_conds.size() << " records size = " << table_records[i].size() << endl;
         }
     
     // prepare output titles
@@ -356,7 +359,7 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
         output_aggregate_type = tds[i]->Column(selector.query_column.col_name)->typeEnum;
         if (output_aggregate_type != INT_ENUM && output_aggregate_type != FLOAT_ENUM)
         {
-            cerr << "AVG query should only be apply for int|float type" << endl;
+            *err << "AVG query should only be apply for int|float type" << endl;
             assert(false);
         }
     } else if (selector.selector_type == Selector::SELECT_SUM) {
@@ -366,7 +369,7 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
         output_aggregate_type = tds[i]->Column(selector.query_column.col_name)->typeEnum;
         if (output_aggregate_type != INT_ENUM && output_aggregate_type != FLOAT_ENUM)
         {
-            cerr << "SUM query should only be apply for int|float type" << endl;
+            *err << "SUM query should only be apply for int|float type" << endl;
             assert(false);
         }
     } else if (selector.selector_type == Selector::SELECT_MIN) {
@@ -400,20 +403,19 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
             {
                 if (selected_count % 10 == 0)
                 {
-                    cout << endl;
                     for(int i = 0; i < (int)output_titles.size(); i ++)
                     {
-                        if (i) cout << " : ";
-                        cout << output_titles[i];
+                        if (i) *out << " :: ";
+                        *out << output_titles[i];
                     }
-                    cout << endl;
+                    *out << endl;
                 }
                 for(int i = 0; i < (int)output_titles.size(); i ++)
                 {
-                    if (i) cout << " : ";
-                    cout << stringify(output_types[i], current_records[output_record_idx[i]]->GetValue(output_record_col_idx[i]));
+                    if (i) *out << " :: ";
+                    *out << stringify(output_types[i], current_records[output_record_idx[i]]->GetValue(output_record_col_idx[i]));
                 }
-                cout << endl;
+                *out << endl;
             } else {
                 data_t value = nullptr;
                 if (selector.has_query_column)
@@ -494,16 +496,16 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
     {
         if (aggregate_data != nullptr && selector.selector_type == Selector::SELECT_AVG)
             aggregate_data = div(output_aggregate_type, aggregate_data, selected_count);
-        cout << output_aggregate_title << endl;
+        *out << output_aggregate_title << endl;
         if (selector.has_query_column)
         {
-            cout << stringify(output_aggregate_type, aggregate_data) << endl;
+            *out << stringify(output_aggregate_type, aggregate_data) << endl;
         } else if (selector.selector_type == Selector::SELECT_COUNT) {
-            cout << selected_count << endl;
+            *out << selected_count << endl;
         } else {
             assert(false);
         }
     }
 
-    cout << "selected count : " << selected_count << endl;
+    if (debug_on) *out << "selected count : " << selected_count << endl;
 }

@@ -48,7 +48,7 @@ void MultiHashTable::Insert(data_t key, int value)
         data_file = make_shared<VectorFile>(filename + ".data");
         header = initTable(file, key_bytes);
 
-        cout << "Extend to M = " << header->M << endl;
+        // cout << "Extend to M = " << header->M << endl;
     }
 }
 void MultiHashTable::Delete(data_t key, int value)

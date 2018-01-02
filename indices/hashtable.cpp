@@ -39,7 +39,7 @@ void HashTable::Insert(data_t key, int value)
         file = make_shared<File>(filename);
         header = initTable(file, key_bytes);
 
-        cout << "Extend to M = " << header->M << endl;
+        // cout << "Extend to M = " << header->M << endl;
     }
 }
 void HashTable::Delete(data_t key)

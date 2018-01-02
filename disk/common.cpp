@@ -121,10 +121,14 @@ vector<string> listdir(const string& path)
     struct dirent *ep;
     vector<string> ans;
 
-    dp = opendir ("./");
+    dp = opendir(path.c_str());
     if (dp != NULL)
     {
-        while (ep = readdir (dp)) ans.push_back(ep->d_name);
+        while (ep = readdir(dp))
+        {
+            if (ep->d_name != string(".") && ep->d_name != string(".."))
+                ans.push_back(ep->d_name);
+        }
         closedir(dp);
     }
 

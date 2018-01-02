@@ -55,8 +55,6 @@ public:
     bool IsNull(const string& columnName);
     bool IsNull(int columnIndex);
 
-    void Output();
-
 private:
     vector<data_t> values; // 每列的值
 };

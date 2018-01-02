@@ -97,6 +97,10 @@ stmt            : sysStmt ';'
                     {
                         $$ = $1;
                     }
+                | ';'
+                    {
+                        $$ = new EmptyStmt();
+                    }
                 ;
 
 sysStmt         : SHOW DATABASES

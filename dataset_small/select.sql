@@ -9,9 +9,9 @@ USE orderDB;
 --     AND customer_id = customer.id
 --     AND book_id = book.id;
 
--- SELECT * FROM website, price, book WHERE book.id = 200002
---     AND website_id = website.id
---     AND book_id = book.id;
+SELECT * FROM website, price, book WHERE book.id = 200002
+    AND website_id = website.id
+    AND book_id = book.id;
 
 -- SELECT price FROM website, price, book WHERE book.id = 200002
 --     AND website_id = website.id
@@ -29,4 +29,4 @@ USE orderDB;
 --     AND website_id = website.id
 --     AND book_id = book.id;
 
-SELECT * FROM book WHERE title LIKE '%Without%';
+-- SELECT * FROM book WHERE title LIKE '%Without%';

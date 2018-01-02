@@ -18,6 +18,15 @@ public:
     virtual void run(Context* ctx) = 0;
 };
 
+class EmptyStmt : public Statement
+{
+public:
+    void run(Context* ctx)
+    {
+        // nothing
+    }
+};
+
 // nothing todo, should not be usedif possible
 class unStmt : public Statement
 {

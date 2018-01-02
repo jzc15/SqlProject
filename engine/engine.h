@@ -6,6 +6,7 @@
 #include "tableop.h"
 #include "crudop.h"
 #include "indexop.h"
+#include "options.h"
 
 void init_context(Context* ctx);
 

@@ -14,7 +14,7 @@ void create_index(Context* ctx, const string& tb_name, const string& column_name
     int cd_idx = td->ColumnIndex(column_name);
     if (cd->indexed)
     {
-        cout << "`" << tb_name << "`.`" << column_name << "` already has index" << endl;
+        *err << "`" << tb_name << "`.`" << column_name << "` already has index" << endl;
     } else {
         cd->SetIndexed(true);
         BPlusTree::ptr indices = make_shared<BPlusTree>(cd->IndexFilename(), cd->typeEnum);
@@ -26,7 +26,7 @@ void create_index(Context* ctx, const string& tb_name, const string& column_name
             indices->Insert(record->GetValue(cd_idx), file->CurrentRID());
             data = file->Next();
         }
-        cout << "success created index for `" << tb_name << "`.`" << column_name << "`" << endl;
+        *out << "success created index for `" << tb_name << "`.`" << column_name << "`" << endl;
     }
 }
 
@@ -39,8 +39,8 @@ void drop_index(Context* ctx, const string& tb_name, const string& column_name)
     {
         cd->SetIndexed(false);
         BPlusTree::RemoveIndex(cd->IndexFilename());
-        cout << "success drop index for `" << tb_name << "`.`" << column_name << "`" << endl;
+        *out << "success drop index for `" << tb_name << "`.`" << column_name << "`" << endl;
     } else {
-        cout << "`" << tb_name << "`.`" << column_name << "` does not have index" << endl;
+        *err << "`" << tb_name << "`.`" << column_name << "` does not have index" << endl;
     }
 }

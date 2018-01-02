@@ -447,7 +447,7 @@ void BPlusTree::DeleteLargeEnough(node_t* node, data_t key, int value)
             }
         if (value_pos == -1)
         {
-            cout << "ERROR AT DELETE KEY : "; Output(key); cout << " value = " << value << endl;
+            assert(false);
         } else {
             for(int i = value_pos; i+1 < (int)value_list->size(); i ++)
                 value_list->data()[i] = value_list->data()[i+1];

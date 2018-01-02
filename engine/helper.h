@@ -1,13 +1,14 @@
 #ifndef ENGINE_HELPER_H
 #define ENGINE_HELPER_H
 
+#include "options.h"
 #include "crudop.h"
 #include <ddf/record.h>
 #include <iostream>
 #include <vector>
 using namespace std;
 
-#define TITLE(name) {cout << "========= " << #name << " =========" << endl;}
+#define TITLE(name) { if (debug_on) *out << "========= " << #name << " =========" << endl;}
 
 // 检查该记录是否合法
 bool record_check_ok(Record::ptr record, int rid = -1);

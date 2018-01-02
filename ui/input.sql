@@ -1,2 +1,2 @@
-USE database1
-select * from
+USE orderDB;
+SHOW TABLES;

@@ -319,39 +319,3 @@ bool Record::IsNull(int columnIndex)
 {
     return values[columnIndex] == nullptr;
 }
-
-void Record::Output()
-{
-    for(int i = 0; i < (int)td->cols.size(); i ++)
-    {
-        ColDesc::ptr col = td->cols[i];
-        cout << col->columnName << " : ";
-        if (values[i] == nullptr)
-        {
-            cout << "NULL";
-        } else {
-            switch(col->typeEnum)
-            {
-            case INT_ENUM:
-                {
-                    cout << *(int*)(values[i]->data());
-                    break;
-                }
-            case FLOAT_ENUM:
-                {
-                    cout << *(float*)(values[i]->data());
-                    break;
-                }
-            case CHAR_ENUM: case VARCHAR_ENUM:
-                {
-                    cout << string((char*)values[i]->data(), values[i]->size());
-                    break;
-                }
-            default:
-                assert(false);
-            }
-        }
-        cout << " | ";
-    }
-    cout << endl;
-}

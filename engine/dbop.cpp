@@ -4,9 +4,15 @@
 void show_databases(Context* ctx)
 {
     TITLE(show_databases);
+    if (debug_on)
+    {
+        *out << ctx->pwd << endl;
+        *out << ctx->storage_path << endl;
+    }
+
     vector<string> databases = listdir(ctx->storage_path);
     for(int i = 0; i < (int)databases.size(); i ++)
-        cout << databases[i] << endl;
+        *out << databases[i] << endl;
 }
 
 void create_database(Context* ctx, const string& db_name)

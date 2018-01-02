@@ -17,7 +17,7 @@ bool record_check_ok(Record::ptr record, int rid)
         auto c = record->td->cols[i];
         if (!c->allow_null && record->IsNull(i)) // 空值检查
         {
-            cerr << "column `" << c->columnName << "` not allow null" << endl;
+            *err << "column `" << c->columnName << "` not allow null" << endl;
             return false;
         }
         if (c->is_foreign_key) // 外键存在
@@ -27,7 +27,7 @@ bool record_check_ok(Record::ptr record, int rid)
             HashTable::ptr indices = make_shared<HashTable>(foreign_td->PrimaryFilename(), foreign_td->PrimarySize());
             if (!indices->Exists(record->GetValue(i)))
             {
-                cerr << "foreign column `" << c->columnName << "` for `" << c->foreign_tb_name << "." << c->foreign_col_name << "` key not exists : " << stringify(c->typeEnum, record->GetValue(i)) << endl;
+                *err << "foreign column `" << c->columnName << "` for `" << c->foreign_tb_name << "." << c->foreign_col_name << "` key not exists : " << stringify(c->typeEnum, record->GetValue(i)) << endl;
                 return false;
             }
         }
@@ -37,12 +37,12 @@ bool record_check_ok(Record::ptr record, int rid)
         HashTable::ptr indices = make_shared<HashTable>(record->td->PrimaryFilename(), record->td->PrimarySize());
         if (indices->Exists(record->PrimaryKey()) && indices->Fetch(record->PrimaryKey()) != rid)
         {
-            cerr << "primary key exists : ";
+            *err << "primary key exists : ";
             for(int i = 0; i < (int)record->td->PrimaryIdxs()->size(); i ++)
             {
-                cout << stringify(record->td->Column(record->td->PrimaryIdxs()->at(i))->typeEnum, record->GetValue(i)) << " ";
+                *err << stringify(record->td->Column(record->td->PrimaryIdxs()->at(i))->typeEnum, record->GetValue(i)) << " ";
             }
-            cout << endl;
+            *err << endl;
             return false;
         }
     }
@@ -446,7 +446,7 @@ vector<int> list_conditions_rids(TableDesc::ptr td, const vector<Condition>& con
     for(int i = 0; i < (int)conds.size(); i ++)
     {
         int count = calculate_condition_count(td, conds[i]);
-        cout << "cond " << i << " : " << count << endl;
+        if (debug_on) *out << "cond " << i << " : " << count << endl;
         if (count < bestCount)
         {
             bestCount = count;
@@ -454,7 +454,7 @@ vector<int> list_conditions_rids(TableDesc::ptr td, const vector<Condition>& con
         }
     }
     vector<int> rids = list_condition_rids(td, conds[bestColumnIndex]);
-    cout << "best rid count : " << rids.size() << endl;
+    if (debug_on) *out << "best rid count : " << rids.size() << endl;
     SlotsFile::ptr file = make_shared<SlotsFile>(td->disk_filename);
     vector<int> ans;
     for(auto rid : rids)
@@ -480,7 +480,7 @@ void solve_column_tb_name(Context* ctx, const vector<string>& tables, Column& co
         {
             if (match_td != nullptr)
             {
-                cerr << "multi table match for column `" << column.col_name << "`" << endl;
+                *err << "multi table match for column `" << column.col_name << "`" << endl;
             }
             assert(match_td == nullptr);
             match_td = td;
@@ -488,7 +488,7 @@ void solve_column_tb_name(Context* ctx, const vector<string>& tables, Column& co
     }
     if (match_td == nullptr)
     {
-        cerr << "no table match column `" << column.col_name << "`" << endl;
+        *err << "no table match column `" << column.col_name << "`" << endl;
     }
     assert(match_td != nullptr);
     column.tb_name = match_td->tableName;

@@ -11,7 +11,7 @@ void show_tables(Context* ctx)
     TITLE(show_tables);
     for(auto x : ctx->dd->TableList())
     {
-        cout << x << endl;
+        *out << x << endl;
     }
 }
 
@@ -31,7 +31,7 @@ void create_table(Context* ctx,
     for(auto col : primary_cols)
     {
         if (!td->Column(col)->fixed) {
-            cerr << "Primary key should be fix size data type." << endl;
+            *err << "Primary key should be fix size data type." << endl;
             return;
         }
         td->Column(col)->SetOneOfPrimary();
@@ -44,18 +44,18 @@ void create_table(Context* ctx,
         ColDesc::ptr f = ref_td->Column(foreign.ref_col_name);
         if (!f->is_oneof_primary)
         {
-            cerr << "ERROR ON CREATE TABLE : foreign key is not a primary key" << endl;
+            *err << "ERROR ON CREATE TABLE : foreign key is not a primary key" << endl;
             return;
         }
         if (ref_td->PrimaryIdxs()->size() != 1u)
         {
-            cerr << "ERROR ON CREATE TABLE : foreign key is not the only primary key" << endl;
+            *err << "ERROR ON CREATE TABLE : foreign key is not the only primary key" << endl;
             return;
         }
         ColDesc::ptr c = td->Column(foreign.col_name);
         if (c->typeEnum != f->typeEnum)
         {
-            cerr << "ERROR ON CREATE TABLE : foreign key type is not the same" << endl;
+            *err << "ERROR ON CREATE TABLE : foreign key type is not the same" << endl;
             return;
         }
         c->SetForeignKey(foreign.ref_tb_name, foreign.ref_col_name);
@@ -87,6 +87,6 @@ void desc_table(Context* ctx, const string& tb_name)
 
     for(auto c : td->cols)
     {
-        cout << c->columnName << " " << c->typeName << endl;
+        *out << c->columnName << " " << c->typeName << endl;
     }
 }
