@@ -1,17 +1,70 @@
 from django.shortcuts import render
 
+requestfilename = "input.sql"
+responsefilename = "output.txt"
 # Create your views here.
+
+def readResult(s):
+    sl = s.split(" : ")
+    t = []
+    for x in sl:
+        t.append(x)
+    print(t)
+    return t
 
 def index(request):
     context = {}
-    context['dblist'] = ['test1', 'test2']
+    requesttext = "SHOW DATABASES\n"
+    requestfile = open(requestfilename, "w")
+    requestfile.write(requesttext)
+    
+    outfile = 'db' + responsefilename
+
+    ok = True
+    #todo request
+    #os.system("./ ../build/main ")
+
+    if ok:
+        responsefile = open(outfile, "r")
+        line = responsefile.readline()
+        context['dblist'] = []
+        while(True):
+            line = responsefile.readline()
+            if(len(line) <= 0):
+                break
+            word = line.replace('\n', '').replace('\r', '')
+            context['dblist'].append(word)
+    else:
+        context['dblist'] = ['error']
     context['dir'] = '/'
     return render(request, "sqlui/database.html", context)
 
 def database(request):
     context = {}
-    context['tblist'] = ['test1', 'test2', 'test3']
+    requesttext = "USE " +  request.GET.get('databaseName') + "\n"
+    requesttext += "SHOW TABLES\n"
+
+    requestfile = open(requestfilename, "w")
+    requestfile.write(requesttext)
     
+    outfile = 'tb' + responsefilename
+    ok = True
+
+    #todo request
+
+    if ok:
+        responsefile = open(outfile, "r")
+        line = responsefile.readline()
+        context['tblist'] = []
+    
+        while(True):
+            line = responsefile.readline()
+            if(len(line) <= 0):
+                break
+            word = line.replace('\n', '').replace('\r', '')
+            context['tblist'].append(word)
+    else:
+        context['tblist'] = ['error']
     request.session['databaseName'] =  request.GET.get('databaseName')
     context['dir'] = '/' + request.GET.get('databaseName') + '/'
     context['databaseName'] = request.GET.get('databaseName')
@@ -20,39 +73,86 @@ def database(request):
 def table(request):
     context = {}
 
-    tbinfo = {}
-    tbinfo['thead'] = ['th1', 'th2', 'th3', 'th4']
-    tbinfo['tbinfo'] = [{"tbitem":['t1', 't2', 't3', 't4']},{"tbitem":['test1', 'test2', 'test3', 'test4']}]
-    
-    context['tbgroup'] = [tbinfo,]
+    context['tbgroup'] = []
     request.session['tableName'] =  request.GET.get('tableName')
     context['dir'] = '/' + request.session.get('databaseName') + '/' + request.GET.get('tableName')
     return render(request, "sqlui/result.html", context)
 
 def deldatabase(request):
     context = {}
-    #todo delete database
-    #todo show databaselist
+    requesttext = "DROP DATABASES " + request.GET.get('databaseName') + "\n"
+    requestfile = open(requestfilename, "w")
+    requestfile.write(requesttext)
     
-    context['dblist'] = ['todo']  
+    outfile = 'db' + responsefilename
+    ok = True
+    #todo request
+
+    if ok:
+        responsefile = open(outfile, "r")
+        line = responsefile.readline()
+        context['dblist'] = []
+        while(True):
+            line = responsefile.readline()
+            if(len(line) <= 0):
+                break
+            word = line.replace('\n', '').replace('\r', '')
+            context['dblist'].append(word)
+    else:
+        context['dblist'] = ['error']
     context['dir'] = '/'
     return render(request, "sqlui/database.html", context)
 
 def adddatabase(request):
     context = {}
-    #todo add database
-    #todo show databaselist
     
-    context['dblist'] = ['todo']  
+    requesttext = request.GET.get("sql") + "\n"
+    requestfile = open(requestfilename, "w")
+    requestfile.write(requesttext)
+    
+    outfile = 'db' + responsefilename
+    ok = True
+    #todo request
+    if ok:
+        responsefile = open(outfile, "r")
+        line = responsefile.readline()
+        context['dblist'] = []
+        while(True):
+            line = responsefile.readline()
+            if(len(line) <= 0):
+                break
+            word = line.replace('\n', '').replace('\r', '')
+            context['dblist'].append(word)
+    else:
+        context['dblist'] = ['error']
     context['dir'] = '/'
     return render(request, "sqlui/database.html", context)
 
 def deltable(request):
     context = {}
-    #todo delete table
-    #todo show tablelist
     
-    context['tblist'] = ['todo']  
+    requesttext = "USE " +  request.session.get('databaseName') + "\n"
+    requesttext += "DROP TABLE " + request.GET.get('tableName') + "\n"
+    requestfile = open(requestfilename, "w")
+    requestfile.write(requesttext)
+    
+    outfile = 'tb' + responsefilename
+    ok = True
+    #todo request
+
+    if ok:
+        responsefile = open(outfile, "r")
+        line = responsefile.readline()
+        context['tblist'] = []
+    
+        while(True):
+            line = responsefile.readline()
+            if(len(line) <= 0):
+                break
+            word = line.replace('\n', '').replace('\r', '')
+            context['tblist'].append(word)
+    else:
+        context['tblist'] = ['error']
     
     context['databaseName'] = request.session.get('databaseName')
     context['dir'] = '/' + context['databaseName'] + '/'
@@ -60,24 +160,73 @@ def deltable(request):
 
 def addtable(request):
     context = {}
-    #todo delete table
-    #todo show tablelist
     
-    context['tblist'] = ['todo']  
+    requesttext = "USE " +  request.session.get('databaseName') + "\n"
+    requesttext += request.GET.get("sql") + "\n"
+    requestfile = open(requestfilename, "w")
+    requestfile.write(requesttext)
+    
+    outfile = 'tb' + responsefilename
+    ok = True
+    #todo request
+
+    if ok:
+        responsefile = open(outfile, "r")
+        line = responsefile.readline()
+        context['tblist'] = []
+    
+        while(True):
+            line = responsefile.readline()
+            if(len(line) <= 0):
+                break
+            word = line.replace('\n', '').replace('\r', '')
+            context['tblist'].append(word)
+    else:
+        context['tblist'] = ['error']
+     
     context['databaseName'] = request.session.get('databaseName')
     context['dir'] = '/' + context['databaseName'] + '/'
     return render(request, "sqlui/table.html", context)
 
 def addsql(request):
     context = {}
-    #todo sql
-    #todo show tbinfo
     
-    tbinfo = {}
-    tbinfo['thead'] = ['todo', 'todo', 'todo', 'todo', 'todo']
-    tbinfo['tbinfo'] = [{"tbitem":['todo', 'todo', 'todo', 'todo', 'todo']},{"tbitem":['todo', 'todo', 'todo', 'todo', 'todo']}]
+    requesttext = "USE " +  request.session.get('databaseName') + "\n"
+    requesttext += request.GET.get("sql") + "\n"
+    requestfile = open(requestfilename, "w")
+    requestfile.write(requesttext)
     
-    context['tbgroup'] = [tbinfo,tbinfo]
+    outfile = 'result' + responsefilename
+    ok = True
+    #todo request
+
+    if ok:
+        responsefile = open(outfile, "r")
+        line = responsefile.readline()
+        hword = line.replace('\n', '').replace('\r', '')
+        context['tbgroup'] = []
+        tbinfo = {}
+        tbinfo['thead'] = readResult(hword)
+        tbinfo['tbinfo'] = []
+        while(True):
+            line = responsefile.readline()
+            if(len(line) <= 0):
+                break
+            word = line.replace('\n', '').replace('\r', '')
+            if word in hword and hword in word:
+                context['tbgroup'].append(tbinfo)
+                tbinfo['tbinfo'] = []
+            else:
+                tbinfo['tbinfo'].append({"tbitem":readResult(word)})
+        context['tbgroup'].append(tbinfo)
+    else:
+        tbinfo = {}
+        tbinfo['thead'] = ['error']
+        tbinfo['tbinfo'] = [{"tbitem":['error']}]
+        context['tbgroup'] = [tbinfo]
+    
+    
+    
     request.session['tableName'] =  request.session.get('tableName')
     context['dir'] = '/' + request.session.get('databaseName') + '/' + request.session.get('tableName')
     return render(request, "sqlui/result.html", context)

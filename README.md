@@ -1,5 +1,11 @@
 # SqlProject
 
+## django运行说明
+
+sudo apt-get python3
+sudo apt-get python3-pip
+pip3 install django
+
 ## 20171021 jzc
 
 ### 运行test.sql

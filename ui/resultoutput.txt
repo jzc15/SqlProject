@@ -1,0 +1,8 @@
+book.id : book.title : book.authors : book.publisher : book.copies : price.website_id : price.book_id : price.price : website.id : website.name : website.url
+200002 : 'Standing in the Shadows' : 'Richard Bruce Wright' : 'Osprey Publishing (UK)' : 2900 : 1011 : 200002 : 149.399994 : 1011 : 'buybook' : 'http://www.buybook.com.cn'
+200002 : 'Standing in the Shadows' : 'Richard Bruce Wright' : 'Osprey Publishing (UK)' : 2900 : 1012 : 200002 : 230.600006 : 1012 : 'winxuan' : 'http://www.winxuan.com/'
+200002 : 'Standing in the Shadows' : 'Richard Bruce Wright' : 'Osprey Publishing (UK)' : 2900 : 1013 : 200002 : 228.500000 : 1013 : 'kongfz' : 'http://shop.kongfz.com/'
+200002 : 'Standing in the Shadows' : 'Richard Bruce Wright' : 'Osprey Publishing (UK)' : 2900 : 1014 : 200002 : 209.800003 : 1014 : 'jiushu' : 'http://www.jiushu.net/'
+200002 : 'Standing in the Shadows' : 'Richard Bruce Wright' : 'Osprey Publishing (UK)' : 2900 : 1015 : 200002 : 241.500000 : 1015 : 'booyee' : 'http://www.booyee.com.cn'
+200002 : 'Standing in the Shadows' : 'Richard Bruce Wright' : 'Osprey Publishing (UK)' : 2900 : 1016 : 200002 : 194.399994 : 1016 : 'jiushu' : 'http://www.jiushu.cn/'
+200002 : 'Standing in the Shadows' : 'Richard Bruce Wright' : 'Osprey Publishing (UK)' : 2900 : 1017 : 200002 : 186.199997 : 1017 : 'sz' : 'http://www.szbookmall.com/'
