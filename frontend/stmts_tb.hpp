@@ -22,6 +22,7 @@ public:
         ColumnDefine column_define;
         vector<string> primary_columns;
         ColumnForeign foreign_column;
+        ScopeLimit scope_limit;
 
         Field(){}
     };
@@ -36,6 +37,7 @@ public:
         vector<ColumnDefine> cols;
         vector<string> primary_cols;
         vector<ColumnForeign> foreign_cols;
+        vector<ScopeLimit> scope_limits;
 
         for(auto& x : fields)
         {
@@ -51,12 +53,15 @@ public:
             } else if (x.type_no == 4)
             {
                 foreign_cols.push_back(x.foreign_column);
+            } else if (x.type_no == 5)
+            {
+                scope_limits.push_back(x.scope_limit);
             } else {
                 assert(false);
             }
         }
 
-        create_table(ctx, tb_name, cols, primary_cols, foreign_cols);
+        create_table(ctx, tb_name, cols, primary_cols, foreign_cols, scope_limits);
     }
 };
 

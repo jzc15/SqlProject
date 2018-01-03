@@ -46,6 +46,7 @@ using namespace std;
 %token IDENTIFIER VALUE_INT VALUE_STRING VALUE_FLOAT
 %token NEQ LE GE EQ LT GT LIKE
 %token AVG SUM MIN MAX COUNT
+%token CHECK IN
 
 %type <str> dbName tbName colName IDENTIFIER VALUE_STRING VALUE_INT VALUE_FLOAT
 %type <pro> program
@@ -172,6 +173,12 @@ tbStmt          : CREATE TABLE tbName '(' fieldList ')'
                         DELETE($4);
                         DELETE($6);
                     }
+                | SELECT selector FROM tableList
+                    {
+                        $$ = new SelectStatement(*$2, *$4, vector<Condition>());
+                        DELETE($2);
+                        DELETE($4);
+                    }
                 ;
 
 idxStmt         : CREATE INDEX tbName '(' colName ')'
@@ -210,13 +217,12 @@ field           : colName type
                         DELETE($1);
                         DELETE($2);
                     }
-                | type type
+                | DATE type
                     {
-                        cerr << "[warning] keyword `" << type_name($1->type) << "` as a column name." << endl;
+                        cerr << "[warning] keyword `" << "date" << "` as a column name." << endl;
                         $$ = new CreateTable::Field();
                         $$->type_no = 1;
-                        $$->column_define = ColumnDefine(type_name($1->type), *$2, true);
-                        DELETE($1);
+                        $$->column_define = ColumnDefine("date", *$2, true);
                         DELETE($2);
                     }
                 | colName type NOT TNULL
@@ -242,6 +248,14 @@ field           : colName type
                         DELETE($4);
                         DELETE($7);
                         DELETE($9);
+                    }
+                | CHECK '(' colName IN '(' valueList ')' ')'
+                    {
+                        $$ = new CreateTable::Field();
+                        $$->type_no = 5;
+                        $$->scope_limit = ScopeLimit(*$3, *$6);
+                        DELETE($3);
+                        DELETE($6);
                     }
                 ;
 
@@ -541,6 +555,11 @@ tbName          : IDENTIFIER
 colName         : IDENTIFIER
                     {
                         $$ = $1;
+                    }
+                | DATE
+                    {
+                        cerr << "[warning] keyword `" << "date" << "` as a column name." << endl;
+                        $$ = new string("date");
                     }
                 ;
 

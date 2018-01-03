@@ -43,6 +43,7 @@ ColDesc::ColDesc(TableDesc* td, const Json& info)
     assert(info["indexed"].is_bool());
     assert(info["is_oneof_primary"].is_bool());
     assert(info["is_foreign_key"].is_bool());
+    assert(info["scope_values"].is_array());
 
     columnName = info["col_name"].string_value();
     typeName = info["type_name"].string_value();
@@ -57,6 +58,7 @@ ColDesc::ColDesc(TableDesc* td, const Json& info)
         foreign_tb_name = info["foreign_tb_name"].string_value();
         foreign_col_name = info["foreign_col_name"].string_value();
     }
+    scope_values = info["scope_values"].array_items();
 
     normalize();
 }
@@ -93,6 +95,11 @@ void ColDesc::SetForeignKey(string foreign_tb_name, string foreign_col_name)
     this->foreign_col_name = foreign_col_name;
 }
 
+void ColDesc::SetScopeValues(const vector<Json>& values)
+{
+    scope_values = values;
+}
+
 void ColDesc::normalize()
 {
     std::transform(typeName.begin(), typeName.end(), typeName.begin(), ::tolower);
@@ -125,5 +132,6 @@ Json ColDesc::Dump()
     obj["is_foreign_key"] = is_foreign_key;
     obj["foreign_tb_name"] = foreign_tb_name;
     obj["foreign_col_name"] = foreign_col_name;
+    obj["scope_values"] = scope_values;
     return obj;
 }

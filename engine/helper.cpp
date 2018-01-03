@@ -6,6 +6,7 @@
 #include <indices/multihashtable.h>
 #include <iostream>
 #include <cassert>
+#include <cstdlib>
 
 using namespace std;
 
@@ -20,7 +21,7 @@ bool record_check_ok(Record::ptr record, int rid)
             *err << "column `" << c->columnName << "` not allow null" << endl;
             return false;
         }
-        if (c->is_foreign_key) // 外键存在
+        if (c->is_foreign_key && record->GetValue(i) != nullptr) // 外键存在
         {
             auto foreign_td = record->td->dd->SearchTable(c->foreign_tb_name);
             auto foreign_cd = foreign_td->Column(c->foreign_col_name);
@@ -28,6 +29,42 @@ bool record_check_ok(Record::ptr record, int rid)
             if (!indices->Exists(record->GetValue(i)))
             {
                 *err << "foreign column `" << c->columnName << "` for `" << c->foreign_tb_name << "." << c->foreign_col_name << "` key not exists : " << stringify(c->typeEnum, record->GetValue(i)) << endl;
+                return false;
+            }
+        }
+        if (c->scope_values.size() > 0u && !record->IsNull(i)) // 域约束
+        {
+            bool flag = false;
+            for(auto v : c->scope_values)
+            {
+                Value value;
+                if (v.is_number())
+                {
+                    double x = v.number_value();
+                    char buf[100];
+                    if (int(x) == x) {
+                        sprintf(buf, "%d", int(x));
+                        value = Value::int_value(buf);
+                    } else {
+                        sprintf(buf, "%lf", x);
+                        value = Value::float_value(buf);
+                    }
+                } else if (v.is_string())
+                {
+                    value = Value::string_value(v.string_value());
+                } else {
+                    assert(false);
+                }
+                assert(value_type_trans_ok(c->typeEnum, value));
+                if (compare(c->typeEnum, record->GetValue(i), value.data) == 0)
+                {
+                    flag = true;
+                    break;
+                }
+            }
+            if (!flag)
+            {
+                *err << "column `" << c->columnName << "` does not fit scope limit : " << stringify(c->typeEnum, record->GetValue(i)) << endl;
                 return false;
             }
         }
@@ -61,8 +98,7 @@ bool value_type_trans_ok(type_t type, Value& value)
     case DATE_ENUM:
         if (value.value_type == Value::VALUE_STRING)
         {
-            value.string_to_date();
-            return true;
+            return value.string_to_date();
         } else {
             return false;
         }

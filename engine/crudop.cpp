@@ -210,6 +210,17 @@ void select_op(Context* ctx, Selector selector, vector<string> tables, vector<Co
                 }
         }
 
+        // 条件优化
+        for(const auto& cond : conditions)
+        {
+            if (in_tables.find(cond.column.tb_name) != in_tables.end()) continue;
+            if (cond.is_binary_operator()
+                && cond.expr.expr_type == Expr::EXPR_VALUE) {
+                    in_tables.insert(cond.column.tb_name);
+                    new_tables.push_back(cond.column.tb_name);
+                }
+        }
+
         TopSort<string> top_sort;
         for(const auto& tb : tables)
         {

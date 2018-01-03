@@ -94,6 +94,8 @@ SIMPLE_OPERATOR         (";"|"`"|"'"|"("|")"|","|"*"|".")
 "MIN"                   { PRINT(MIN); return TOKEN(MIN);                }
 "MAX"                   { PRINT(MAX); return TOKEN(MAX);                }
 "COUNT"                 { PRINT(COUNT); return TOKEN(COUNT);            }
+"CHECK"                 { PRINT(CHECK); return TOKEN(CHECK);            }
+"IN"                    { PRINT(IN); return TOKEN(IN);                  }
 
 {NEWLINE}               { /*skip*/                                                      }
 {WHITESPACE}            { /*skip*/                                                      }

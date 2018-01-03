@@ -2,6 +2,7 @@
 #ifndef ENGINE_CRUD_OP_H
 #define ENGINE_CRUD_OP_H
 
+#include <json11.hpp>
 #include "context.h"
 #include <disk/common.h>
 #include <cstdio>
@@ -56,9 +57,35 @@ public:
         ans.data = nullptr;
         return ans;
     }
+    Json basic_to_json() {
+        switch(value_type)
+        {
+        case VALUE_INT:
+            return Json(*(int*)data->data());
+        case VALUE_STRING:
+            return Json(string((char*)data->data(), data->size()));
+        case VALUE_FLOAT:
+            return Json(*(float*)data->data());
+        default: assert(false);
+        }
+    }
     
-    void string_to_date()
+    bool string_to_date()
     {
+        { // check
+            const static int MAX_DAYS[] = {
+                0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+            };
+            string str((char*)data->data(), data->size());
+            int year, mon, day;
+            if (sscanf(str.c_str(), "%d-%d-%d", &year, &mon, &day) != 3) return false;
+            if (year < 1970 || 3000 < year) return false;
+            if (mon < 1 || 12 < mon) return false;
+            if (day < 1 || 31 < day) return false;
+            bool run = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+            if (day > MAX_DAYS[mon] + int(run&&(mon==2))) return false;
+        }
+
         std::tm tm = {};
         std::stringstream ss(string((char*)data->data(), data->size()));
         ss >> std::get_time(&tm, "%Y-%m-%d");
@@ -66,6 +93,8 @@ public:
 
         data = alloc_data(0);
         append(data, t);
+
+        return true;
     }
     void int_to_float()
     {

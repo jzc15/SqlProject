@@ -32,6 +32,7 @@ public:
     bool is_foreign_key;
     string foreign_tb_name;
     string foreign_col_name;
+    vector<Json> scope_values;
 
     type_t typeEnum;
     size_t size; // 对于定长数据，占多少*字节*的空间
@@ -50,6 +51,7 @@ public:
     void SetIndexed(bool indexed = true);
     void SetOneOfPrimary();
     void SetForeignKey(string foreign_tb_name, string foreign_col_name);
+    void SetScopeValues(const vector<Json>& values);
 
     string IndexFilename();
     string MultiPrimaryFilename();

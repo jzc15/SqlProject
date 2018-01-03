@@ -19,7 +19,8 @@ void create_table(Context* ctx,
     const string& tb_name,
     const vector<ColumnDefine>& cols,
     const vector<string>& primary_cols,
-    const vector<ColumnForeign>& foreign_cols)
+    const vector<ColumnForeign>& foreign_cols,
+    const vector<ScopeLimit>& scope_limits)
 {
     TableDesc::ptr td = ctx->dd->CreateTable(tb_name);
     for(auto col : cols)
@@ -59,6 +60,29 @@ void create_table(Context* ctx,
             return;
         }
         c->SetForeignKey(foreign.ref_tb_name, foreign.ref_col_name);
+    }
+    td->Finalize();
+
+    // 域约束
+    for(auto scope_limit : scope_limits)
+    {
+        vector<Json> values;
+        auto cd = td->Column(scope_limit.col_name);
+        for(auto v : scope_limit.values)
+        {
+            if (v.value_type == Value::VALUE_NULL)
+            {
+                *err << "ERROR ON CREATE TABLE : scope limit value can not be NULL" << endl;
+                return;
+            }
+            values.push_back(v.basic_to_json());
+            if (!value_type_trans_ok(cd->typeEnum, v))
+            {
+                *err << "ERROR ON CREATE TABLE : wrong type of scope limit value : " << v.stringify() << " for column `" << scope_limit.col_name << "`" << endl;
+                return;
+            }
+        }
+        cd->SetScopeValues(values);
     }
     td->Finalize();
 

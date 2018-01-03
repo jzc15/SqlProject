@@ -92,6 +92,9 @@ int compare(type_t type, data_t data_a, data_t data_b)
         }
         return 0;
         break;
+    case DATE_ENUM:
+        return (long long)(*(time_t*)data_a->data()) - (long long)(*(time_t*)data_b->data());
+        break;
     default: assert(false);
     }
 }
