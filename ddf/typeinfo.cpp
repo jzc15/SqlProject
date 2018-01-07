@@ -86,8 +86,8 @@ int compare(type_t type, data_t data_a, data_t data_b)
     case CHAR_ENUM: case VARCHAR_ENUM:
         for(int i = 0; i < (int)data_a->size() || i < (int)data_b->size(); i ++)
         {
-            if (i == (int)data_b->size()) return -1;
-            if (i == (int)data_a->size()) return 1;
+            if (i == (int)data_b->size()) return 1;
+            if (i == (int)data_a->size()) return -1;
             if (data_a->data()[i] != data_b->data()[i]) return data_a->data()[i] - data_b->data()[i];
         }
         return 0;
