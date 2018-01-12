@@ -1,2 +1,2 @@
 USE orderDB;
-SHOW TABLES;
+SELECT * FROM orders WHERE quantity<2;;

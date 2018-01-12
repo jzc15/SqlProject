@@ -1,0 +1,938 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据库项目文档</title>
+<link rel="stylesheet" href="https://stackedit.io/res-min/themes/base.css" />
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body><div class="container"><h1 id="数据库项目文档">数据库项目文档</h1>
+
+<p>2015011343 陈宇</p>
+
+<p>2015011337 季智成</p>
+
+<hr>
+
+<!-- TOC -->
+
+<ul>
+<li><a href="#数据库项目文档">数据库项目文档</a> <br>
+<ul><li><a href="#实现的功能">实现的功能</a></li>
+<li><a href="#系统结构设计">系统结构设计</a></li>
+<li><a href="#主要模块设计原理">主要模块设计原理</a> <br>
+<ul><li><a href="#基础数据类型">基础数据类型</a></li>
+<li><a href="#文件系统">文件系统</a></li>
+<li><a href="#记录管理模块">记录管理模块</a> <br>
+<ul><li><a href="#数据库数据表结构定义">数据库/数据表结构定义</a></li>
+<li><a href="#数据储存与序列化">数据储存与序列化</a></li>
+<li><a href="#记录存储方式">记录存储方式</a></li></ul></li>
+<li><a href="#索引模块">索引模块</a> <br>
+<ul><li><a href="#变长数组文件系统">变长数组文件系统</a></li>
+<li><a href="#b树索引">B+树索引</a></li>
+<li><a href="#散列索引">散列索引</a></li></ul></li>
+<li><a href="#查询解析模块">查询解析模块</a></li>
+<li><a href="#系统管理模块">系统管理模块</a> <br>
+<ul><li><a href="#创建">创建</a></li>
+<li><a href="#数据类型转换">*数据类型转换</a></li>
+<li><a href="#插入">插入</a></li>
+<li><a href="#删除">删除</a></li>
+<li><a href="#更新">更新</a></li>
+<li><a href="#查询">查询</a></li>
+<li><a href="#查询优化">*查询优化</a></li>
+<li><a href="#其他">*其他</a></li></ul></li>
+<li><a href="#ui模块">UI模块</a></li></ul></li>
+<li><a href="#小组分工">小组分工</a></li>
+<li><a href="#参考文献">参考文献</a></li>
+<li><a href="#项目源码">项目源码</a> <br>
+<ul><li><a href="#github仓库地址">github仓库地址</a></li>
+<li><a href="#目录说明">目录说明</a></li>
+<li><a href="#环境安装">环境安装</a></li>
+<li><a href="#编译与运行">编译与运行</a></li>
+<li><a href="#gui运行说明">GUI运行说明</a></li></ul></li></ul></li>
+</ul>
+
+<!-- /TOC -->
+
+<hr>
+
+
+
+<h2 id="实现的功能">实现的功能</h2>
+
+<ul>
+<li><p>基本功能：数据的增删查改，创建和删除数据库和数据表</p></li>
+<li><p>索引：B+树索引，唯一键值hash，复键值hash</p></li>
+<li><p>查询优化：对于单表查询使用已有索引进行估价，对于多表查询使用拓扑排序确定一个最佳的查询顺序，对于外键和主键有优化</p></li>
+<li><p>外键约束：插入时检查外键是否存在，删除时一并删除相关联的数据</p></li>
+<li><p>支持多种类型：</p>
+
+<ol><li>#define&nbsp;INT_TYPE&nbsp;(“int”)&nbsp;&nbsp;</li>
+<li>#define&nbsp;CHAR_TYPE&nbsp;(“char”)&nbsp;&nbsp;</li>
+<li>#define&nbsp;VARCHAR_TYPE&nbsp;(“varchar”)&nbsp;&nbsp;</li>
+<li>#define&nbsp;DATE_TYPE&nbsp;(“date”)&nbsp;//&nbsp;DATE储存为time_t</li>
+<li>#define&nbsp;FLOAT_TYPE&nbsp;(“float”)&nbsp;&nbsp;</li>
+<li>#define&nbsp;DECIMAL_TYPE&nbsp;(“decimal”)&nbsp;//&nbsp;定点数，两个int，9位&nbsp;&nbsp;</li></ol></li>
+<li><p>支持三个或以上表的连接：对于有外键约束的查询有优化</p></li>
+<li><p>聚集查询：支持AVG,SUM,MIN,MAX,COUNT</p></li>
+<li><p>模糊查询：转化为正则表达式判断</p></li>
+<li><p>散列索引：对主键建有两种类似的hash索引</p></li>
+<li><p>属性域约束：会在插入和修改数据的时候检查值是否符合要求</p></li>
+<li><p>GUI：实现了web版本的GUI</p></li>
+</ul>
+
+
+
+<h2 id="系统结构设计">系统结构设计</h2>
+
+<p><img src="images/system.png" alt="" title=""></p>
+
+
+
+<h2 id="主要模块设计原理">主要模块设计原理</h2>
+
+
+
+<h3 id="基础数据类型">基础数据类型</h3>
+
+<p>在系统设计中，为了性能和易用性考虑，在代码中大量使用了C++11的<code>shared_ptr</code>，由此可以不用担心拷贝时的高复杂度和内存泄露，如下：</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cpp"><span class="hljs-comment">// 页式文件</span>
+<span class="hljs-keyword">class</span> File
+{
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-keyword">typedef</span> <span class="hljs-built_in">shared_ptr</span>&lt;File&gt; ptr;
+};</code></pre>
+
+<p>并且，在系统中有很多地方需要将数据序列化为二进制数据，并且还需要记录数据的长度，所以考虑用<code>vector</code>和<code>unsigned char</code>组合来实现：</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cpp"><span class="hljs-keyword">typedef</span> <span class="hljs-built_in">shared_ptr</span>&lt;<span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;uint8&gt;</span>&gt; data_t;
+
+<span class="hljs-keyword">bool</span> equals(data_t a, data_t b);
+data_t alloc_data(<span class="hljs-keyword">int</span> size);
+data_t clone(data_t data);
+data_t int_data(<span class="hljs-keyword">int</span> value);
+data_t float_data(<span class="hljs-keyword">float</span> value);
+data_t string_data(<span class="hljs-built_in">string</span> str);
+data_t time_data(time_t value);</code></pre>
+
+<p>这里定义的<code>data_t</code>是系统中很多进行数据交互的类型，包括将记录序列化为二进制数据和索引储存的<code>key</code>和<code>value</code>。</p>
+
+
+
+<h3 id="文件系统">文件系统</h3>
+
+<p>由于在项目的某些设计中对页式文件系统有一些特殊的要求，所以并没有使用课程推荐的页式文件系统，而是自己实现了一个简单的版本。</p>
+
+<p>主要功能来说，以8K的单位进行读写，并且会将数据缓存到内存中，在必要时将修改过的数据写会到磁盘上：</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cs"><span class="hljs-comment">// disk/file.h</span>
+<span class="hljs-comment">// 页式文件</span>
+class File
+{
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-title">File</span>(<span class="hljs-keyword">string</span> filename);
+    ~File();
+
+    <span class="hljs-comment">// 重置下一页</span>
+    <span class="hljs-keyword">void</span> ResetNextPage(<span class="hljs-keyword">int</span> page = <span class="hljs-number">0</span>);
+
+    <span class="hljs-comment">// 读取一页，若该页不存在则返回全0的数据</span>
+    data_t ReadPage(<span class="hljs-keyword">int</span> page, <span class="hljs-keyword">bool</span> read_only = <span class="hljs-keyword">false</span>);
+
+    <span class="hljs-comment">// 读取下一页，若该页不存在则返回全0的数据</span>
+    data_t NextPage(<span class="hljs-keyword">bool</span> read_only = <span class="hljs-keyword">false</span>);
+
+    <span class="hljs-comment">// 新页，在最后</span>
+    data_t NewPage(<span class="hljs-keyword">bool</span> read_only = <span class="hljs-keyword">false</span>);
+
+    <span class="hljs-comment">// 返回当前页</span>
+    <span class="hljs-keyword">int</span> CurrentPage();
+
+    <span class="hljs-comment">// 是否结束</span>
+    <span class="hljs-keyword">bool</span> End();
+
+    <span class="hljs-keyword">void</span> MarkDirty(<span class="hljs-keyword">int</span> page);
+
+    <span class="hljs-keyword">void</span> Flush();
+};</code></pre>
+
+<p>此外，还添加了很多和磁盘交互的接口，比如创建文件夹等：</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cpp"><span class="hljs-keyword">void</span> mkdirp(<span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; path);
+<span class="hljs-keyword">void</span> mkfile(<span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; filepath);
+<span class="hljs-keyword">void</span> rmdir(<span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; path);
+<span class="hljs-keyword">void</span> rmfile(<span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; filepath);
+<span class="hljs-keyword">void</span> cpfile(<span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; src, <span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; dst);
+<span class="hljs-keyword">bool</span> exists(<span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; path);
+<span class="hljs-keyword">int</span> filesize(<span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; filepath);
+<span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;<span class="hljs-built_in">string</span>&gt;</span> listdir(<span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; path);
+
+<span class="hljs-built_in">string</span> path_join(<span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; a, <span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; b);
+<span class="hljs-built_in">string</span> get_cwd();</code></pre>
+
+
+
+<h3 id="记录管理模块">记录管理模块</h3>
+
+
+
+<h4 id="数据库数据表结构定义">数据库/数据表结构定义</h4>
+
+<p>在本系统的设计中， <strong>一个数据库对应与一个文件夹，同一个数据库中的所有数据都储存在此文件夹中</strong> 。在该目录下，存在一个<code>ddf.json</code>的文件，此文件以JSON个是记录了该数据库的所以结构信息，包括有哪些表，每个表有哪些列及其类型，每个表有哪些主键以及外键约束。</p>
+
+<p>比如，描述一个列需要记录的信息如下：</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cpp"><span class="hljs-comment">// ddf/coldesc.h</span>
+<span class="hljs-comment">// 列描述类</span>
+<span class="hljs-keyword">class</span> ColDesc
+{
+<span class="hljs-keyword">public</span>:
+    TableDesc* td;
+
+    <span class="hljs-built_in">string</span> columnName;
+    <span class="hljs-built_in">string</span> typeName; <span class="hljs-comment">// 小写</span>
+    size_t length; <span class="hljs-comment">// 长度，对于某些类型时长度限制(varchar)，对于某些类型时指定长度(char)，对于int等定长数据应该恒为1</span>
+    size_t display_length; <span class="hljs-comment">// 展示的长度，对int有效</span>
+    <span class="hljs-keyword">bool</span> allow_null;
+    <span class="hljs-keyword">bool</span> indexed;
+    <span class="hljs-keyword">bool</span> is_oneof_primary;
+    <span class="hljs-keyword">bool</span> is_foreign_key;
+    <span class="hljs-built_in">string</span> foreign_tb_name;
+    <span class="hljs-built_in">string</span> foreign_col_name;
+    <span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;Json&gt;</span> scope_values;
+};</code></pre>
+
+<p>这些信息应该在创建数据库之后，插入数据之前确定好， <strong>由于每个记录被序列化的结果与表结构相关，所以原则上不允许一个表在有数据的情况下修改表结构（添加列等）。</strong></p>
+
+<p>序列化之时，每个列描述为一个<code>Json</code>对象，每个表描述为一个<code>Json</code>数组，每个数据库描述为一个<code>Json</code>数组，最终将数据库的结果写入<code>ddf.json</code>即可。</p>
+
+<p>在<code>ddf/typeinfo.h</code>中，还定义了目前数据库可以支持的数据类型，以及不同数据类型的表现（是否定长，数据大小等）：</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cs"><span class="hljs-comment">// ddf/typeinfo.h</span>
+<span class="hljs-preprocessor">#<span class="hljs-keyword">define</span> INT_TYPE ("int")</span>
+<span class="hljs-preprocessor">#<span class="hljs-keyword">define</span> CHAR_TYPE ("char")</span>
+<span class="hljs-preprocessor">#<span class="hljs-keyword">define</span> VARCHAR_TYPE ("varchar")</span>
+<span class="hljs-preprocessor">#<span class="hljs-keyword">define</span> DATE_TYPE ("date") // DATE储存为int</span>
+<span class="hljs-preprocessor">#<span class="hljs-keyword">define</span> FLOAT_TYPE ("float")</span>
+<span class="hljs-preprocessor">#<span class="hljs-keyword">define</span> DECIMAL_TYPE ("decimal") // 定点数，两个int，9位</span>
+
+<span class="hljs-keyword">enum</span> type_t {
+    INT_ENUM = <span class="hljs-number">0</span>,
+    CHAR_ENUM,
+    VARCHAR_ENUM,
+    DATE_ENUM,
+    FLOAT_ENUM,
+    DECIMAL_ENUM,
+};
+
+size_t type_size(<span class="hljs-keyword">const</span> <span class="hljs-keyword">string</span>&amp; typeName); <span class="hljs-comment">// 该类型单个元素的大小</span>
+<span class="hljs-keyword">bool</span> is_type_fixed(<span class="hljs-keyword">const</span> <span class="hljs-keyword">string</span>&amp; typeName); <span class="hljs-comment">// 是否是定长类型</span>
+type_t type_enum(<span class="hljs-keyword">const</span> <span class="hljs-keyword">string</span>&amp; typeName);
+<span class="hljs-keyword">string</span> type_name(type_t type_enum);</code></pre>
+
+<p><strong>在系统中，不管是何种类型，统计储存为上文中的<code>data_t</code>，然后再通过<code>type_t</code>标识其类型</strong> ，这样做的好处是在很多与具体类型无关的地方（比如索引中），可以忽略掉数据类型而只用关注与<code>data_t</code>其二进制数据本身。</p>
+
+<p>同时，也配套定义了相关处理函数：</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs go"><span class="hljs-comment">// ddf/typeinfo.h</span>
+size_t type_size(<span class="hljs-keyword">const</span> <span class="hljs-typename">string</span>&amp; typeName); <span class="hljs-comment">// 该类型单个元素的大小</span>
+<span class="hljs-typename">bool</span> is_type_fixed(<span class="hljs-keyword">const</span> <span class="hljs-typename">string</span>&amp; typeName); <span class="hljs-comment">// 是否是定长类型</span>
+type_t type_enum(<span class="hljs-keyword">const</span> <span class="hljs-typename">string</span>&amp; typeName);
+<span class="hljs-typename">string</span> type_name(type_t type_enum);
+
+<span class="hljs-comment">// return a - b;</span>
+<span class="hljs-typename">int</span> compare(type_t <span class="hljs-keyword">type</span>, data_t data_a, data_t data_b);
+
+<span class="hljs-comment">// 序列化为可以输出的内容</span>
+<span class="hljs-typename">string</span> stringify(type_t <span class="hljs-keyword">type</span>, data_t data);</code></pre>
+
+
+
+<h4 id="数据储存与序列化">数据储存与序列化</h4>
+
+<p>考虑到存在数据的时候其表结构不会改变，所以可以对应与表结构，用一个数组储存每列的之，即：第0列的数据储存在数组第0个位置，第1列的数据储存在数组第1个位置。</p>
+
+<p>在系统中，一个记录用一个<code>Record</code>表示：</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cpp"><span class="hljs-comment">// ddf/record.h</span>
+<span class="hljs-comment">// 描诉一个记录</span>
+<span class="hljs-comment">// 注意：使用Record的时候要求td指向的TableDescription对象必须存在，不能被销毁</span>
+<span class="hljs-keyword">class</span> Record
+{
+<span class="hljs-keyword">public</span>:
+    TableDesc* td;
+
+    Record(TableDesc* td);
+    ~Record();
+
+    data_t PrimaryKey();
+
+    <span class="hljs-keyword">void</span> SetValue(<span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; columnName, data_t data);
+    <span class="hljs-keyword">void</span> SetValue(<span class="hljs-keyword">int</span> columnIndex, data_t data);
+
+    data_t GetValue(<span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; columnName);
+    data_t GetValue(<span class="hljs-keyword">int</span> columnIndex);
+
+    <span class="hljs-keyword">void</span> SetInt(<span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; columnName, <span class="hljs-keyword">int</span> value);
+    <span class="hljs-comment">// ...</span>
+<span class="hljs-keyword">private</span>:
+    <span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;data_t&gt;</span> values; <span class="hljs-comment">// 每列的值</span>
+};</code></pre>
+
+<p>每个表的一个记录在内存中有其结构，但是最终储存在文件中只能储存为一堆二进制数据，所以在记录与二进制数据之间存在转换过程。</p>
+
+<p><strong>为了支持变长数据，同时也为了鲁棒性，我们最终决定采用课件上介绍的序列化方式：</strong></p>
+
+<p><img src="images/record_storage.png" alt="" title=""></p>
+
+<p>序列化和反序列化的代码在<code>ddf/record.cpp</code>中可以查看到：</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs actionscript"><span class="hljs-comment">// ddf/record.h</span>
+<span class="hljs-comment">// 描诉一个记录</span>
+<span class="hljs-comment">// 注意：使用Record的时候要求td指向的TableDescription对象必须存在，不能被销毁</span>
+<span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Record</span>
+{</span>
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-comment">// 生成序列化的数据</span>
+    data_t Generate();
+    <span class="hljs-comment">// 恢复</span>
+    <span class="hljs-keyword">void</span> Recover(data_t data);
+};</code></pre>
+
+
+
+<h4 id="记录存储方式">记录存储方式</h4>
+
+<p>页式文件系统是以页为单位进行储存的，所以在其基础上，我们还需要封装一个以 <strong>二进制记录</strong> 为单位进行储存的数据结构，并且每个记录可能长度不相同，我们将其命名为 <strong>槽式文件系统</strong> 。</p>
+
+<p>简单起见，我们采用了课件中的储存方式。对于删除，为了减小数据移动带来的RID改变，所以我们只会在相应的位置加上标记，并不会正真删除：</p>
+
+<p><img src="images/disk_storage.png" alt="" title=""></p>
+
+<p>具体实现代码在<code>datamanager/slotsfile.cpp</code>中：</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cs"><span class="hljs-comment">// datamanager/slotsfile.h</span>
+<span class="hljs-comment">// RID = page_id + slot_id, 均从0开始</span>
+<span class="hljs-preprocessor">#<span class="hljs-keyword">define</span> RID(page_id, slot_id) int( (int(page_id) &lt;&lt; 13) | int(slot_id))</span>
+<span class="hljs-preprocessor">#<span class="hljs-keyword">define</span> RID_PAGE_ID(rid) int(int(rid) &gt;&gt; 13)</span>
+<span class="hljs-preprocessor">#<span class="hljs-keyword">define</span> RID_SLOT_ID(rid) int(int(rid) &amp; ((1&lt;&lt;13)-1))</span>
+
+class SlotsFile
+{
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-title">SlotsFile</span>(<span class="hljs-keyword">const</span> <span class="hljs-keyword">string</span>&amp; filename);
+
+    <span class="hljs-comment">// 插入，返回rid</span>
+    <span class="hljs-keyword">int</span> Insert(data_t data);
+
+    <span class="hljs-comment">// 删除，不会移动其他数据</span>
+    <span class="hljs-keyword">void</span> Delete(<span class="hljs-keyword">int</span> rid);
+
+    <span class="hljs-comment">// 获取，如果没有则返回nullptr</span>
+    data_t Fetch(<span class="hljs-keyword">int</span> rid);
+
+    <span class="hljs-comment">// 开始的数据，如果没有则返回nullptr</span>
+    data_t Begin();
+    <span class="hljs-comment">// 当前rid</span>
+    <span class="hljs-keyword">int</span> CurrentRID();
+    <span class="hljs-comment">// 下一个数据，如果没有则返回nullptr</span>
+    data_t Next();
+};</code></pre>
+
+<p>值得一提的是， <strong>该槽式文件系统以二进制记录为单位进行储存，但是并不仅仅被用于储存表的数据，在索引部分也会用到。</strong></p>
+
+
+
+<h3 id="索引模块">索引模块</h3>
+
+
+
+<h4 id="变长数组文件系统">变长数组文件系统</h4>
+
+<p>在索引模块中，主要功能就是根据某个<code>key</code>查找对应的<code>rid</code>，如果允许<code>key</code>重复的话还需要支持查找一个<code>rid</code>列表，为了支持<code>key</code>重复的查询，需要将相同的<code>key</code>对应的<code>rid</code>储存在磁盘中并且要连续，所以需要设计一个”变长数组文件系统”来实现这个功能。</p>
+
+<p><strong>考虑到数组的大小会经常变大，而且添加多余删除，所以使用倍增的方式扩展空间：当剩余空间不足时，新开辟一块大小为所需两倍的空间。</strong></p>
+
+<p>所以，在磁盘上的储存结构为：第一个int表示此数组已经使用了多少个，第二个int表示该位置总共有多少空间可用，接下来一次储存数组的每个数据。</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cpp"><span class="hljs-comment">// datamanager/vectorfile.h</span>
+<span class="hljs-keyword">typedef</span> <span class="hljs-built_in">shared_ptr</span>&lt;<span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;<span class="hljs-keyword">int</span>&gt;</span>&gt; vector_t;
+
+<span class="hljs-comment">// 储存int数组</span>
+<span class="hljs-keyword">class</span> VectorFile
+{
+<span class="hljs-keyword">public</span>:
+    VectorFile(<span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; filename);
+    ~VectorFile();
+
+    <span class="hljs-keyword">int</span> NewVector(<span class="hljs-keyword">int</span> value); <span class="hljs-comment">// 新数组，返回位置</span>
+    vector_t Fetch(<span class="hljs-keyword">int</span> pos); <span class="hljs-comment">// 获取对应位置的数组</span>
+    <span class="hljs-keyword">int</span> Save(<span class="hljs-keyword">int</span> opos, vector_t data, <span class="hljs-keyword">bool</span> append_only = <span class="hljs-keyword">false</span>); <span class="hljs-comment">// 储存，append_only=是否只有增加</span>
+
+    <span class="hljs-keyword">void</span> Flush();
+
+<span class="hljs-keyword">private</span>:
+    <span class="hljs-keyword">struct</span> header_t
+    {
+        <span class="hljs-keyword">int</span> valid;
+        <span class="hljs-keyword">int</span> empty_pos;
+    };
+    <span class="hljs-keyword">struct</span> vec_h_t
+    {
+        <span class="hljs-keyword">int</span> size, capacity;
+    };
+};</code></pre>
+
+
+
+<h4 id="b树索引">B+树索引</h4>
+
+<p>B+树是数据库系统中常用的一种索引，其支持多种查询方式，而且由于其数据都储存在叶节点中，可以很方便的维护节点之间的链接关系，便于遍历。</p>
+
+<p>在我们的系统中，采用的B+树类似下图，不过每个节点的值储存的是其子树的最大值：</p>
+
+<p><img src="images/B+.jpeg" alt="" title=""></p>
+
+<p><strong>在我们的设计中，为了支持对变长字段建索引，所以单独用一个“槽式文件”储存关键字，为了支持重复的关键字，用“变长数组文件”储存相同关键字的rid。</strong></p>
+
+<p>如果创建一个文件名为<code>name.index</code>的B+树索引，实际创建的文件包含：</p>
+
+<ul>
+<li><p><code>name.index</code> : 储存B+树的结构</p></li>
+<li><p><code>name.index.key</code> : 槽式文件，储存B+树的关键字</p></li>
+<li><p><code>name.index.data</code> : 变长数组文件，储存B+树叶节点的rid数组</p></li>
+</ul>
+
+<p>B+树的代码实现在<code>indices/bplustree.h</code>和<code>indices/bplustree.cpp</code>中:</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs java"><span class="hljs-comment">// indices/bplustree.h</span>
+<span class="hljs-javadoc">/**
+ * B+树
+ * 第0页是头
+ * 关键字存其对应儿子的最大值
+ * */</span>
+class BPlusTree
+{
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-title">BPlusTree</span>(<span class="hljs-keyword">const</span> string&amp; filename, type_t type);
+    ~BPlusTree();
+
+    <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> RemoveIndex(<span class="hljs-keyword">const</span> string&amp; filename);
+
+    <span class="hljs-keyword">void</span> Debug();
+
+    <span class="hljs-comment">// 插入</span>
+    <span class="hljs-keyword">void</span> Insert(data_t key, <span class="hljs-keyword">int</span> value);
+
+    <span class="hljs-comment">// 删除</span>
+    <span class="hljs-keyword">void</span> Delete(data_t key, <span class="hljs-keyword">int</span> value);
+
+    <span class="hljs-comment">// 键是否存在</span>
+    bool IsKeyExists(data_t key);
+
+    <span class="hljs-comment">// 总数</span>
+    <span class="hljs-keyword">int</span> TotalCount();
+
+    <span class="hljs-comment">// 小于的数量</span>
+    <span class="hljs-keyword">int</span> LTCount(data_t key);
+
+    <span class="hljs-comment">// 等于的数量</span>
+    <span class="hljs-keyword">int</span> EQCount(data_t key);
+
+    <span class="hljs-comment">// 小于等于的数量</span>
+    <span class="hljs-keyword">int</span> LECount(data_t key);
+
+    Iterator Begin();
+
+    <span class="hljs-comment">// 第一个&gt;=key的位置</span>
+    Iterator Lower(data_t key);
+
+    <span class="hljs-comment">// 第一个&gt;key的位置</span>
+    Iterator Upper(data_t key);
+};</code></pre>
+
+<p><strong>只有通过[CREATE INDEX]语句才会创建B+树索引，主键不会创建B+树索引。</strong></p>
+
+
+
+<h4 id="散列索引">散列索引</h4>
+
+<p>B+树索引支持各种查询，但是其缺点是速度慢，实现复杂。而散列索引则相反，其速度快，实现简单，但是只支持单值查询。</p>
+
+<p>在系统中我们采用的hash算法是将数组的每个字节当作数字，以此乘以<code>P</code>再求余一个给定的数<code>M</code>：</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs vala"><span class="hljs-comment">// indices/hashtable.cpp</span>
+<span class="hljs-keyword">int</span> HashTable::hashValue(<span class="hljs-keyword">uint8</span>* key, <span class="hljs-keyword">int</span> key_bytes, <span class="hljs-keyword">int</span> P, <span class="hljs-keyword">int</span> M)
+{
+    <span class="hljs-keyword">int</span> ret = <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">for</span>(<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; key_bytes; i ++)
+    {
+        ret = (ret *<span class="hljs-constant"> P </span>+ (<span class="hljs-keyword">int</span>)key[i]) % M;
+    }
+    <span class="hljs-keyword">return</span> ret;
+}</code></pre>
+
+<p>在查询中，采用“双向平凡探测法”。</p>
+
+<p>为了支持数据的增长，散列算法会自动扩容，在设计中，当使用率达到<code>75%</code>时，就会将容量加倍，然后将数据迁移到新文件中。</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cs"><span class="hljs-comment">// indices/hashtable.h</span>
+<span class="hljs-comment">// hash表，key唯一</span>
+class HashTable
+{
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-title">HashTable</span>(<span class="hljs-keyword">const</span> <span class="hljs-keyword">string</span>&amp; filename, <span class="hljs-keyword">int</span> key_bytes);
+    ~HashTable();
+
+    <span class="hljs-keyword">void</span> Insert(data_t key, <span class="hljs-keyword">int</span> <span class="hljs-keyword">value</span>); <span class="hljs-comment">// 插入</span>
+    <span class="hljs-keyword">void</span> Delete(data_t key); <span class="hljs-comment">// 删除</span>
+    <span class="hljs-keyword">bool</span> Exists(data_t key); <span class="hljs-comment">// 是否存在</span>
+    <span class="hljs-keyword">int</span> Fetch(data_t key); <span class="hljs-comment">// 获取</span>
+
+    <span class="hljs-keyword">int</span> TotalRecords(); <span class="hljs-comment">// 记录总数</span>
+};</code></pre>
+
+<p>此外，上面介绍的散列只允许一个<code>key</code>对应一个<code>value</code>，为了实现一个<code>key</code>对应多个<code>value</code>的情况，特地设计了可以重复的<code>MultiHashTable</code>。</p>
+
+<p><code>MultiHashTable</code>和<code>HashTable</code>的算法基本相同，使用相同的hash算法，都使用“双向平凡探测法”，都在<code>75%</code>的是否扩容，区别之在于<code>MultiHashTable</code>会采用一个“变长数组文件”储存相同<code>key</code>的<code>value</code>数组：</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cs"><span class="hljs-comment">// indices/multihashtable.h</span>
+<span class="hljs-comment">// hash表，可以有多个相同的key</span>
+class MultiHashTable
+{
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-title">MultiHashTable</span>(<span class="hljs-keyword">const</span> <span class="hljs-keyword">string</span>&amp; filename, <span class="hljs-keyword">int</span> key_bytes);
+    ~MultiHashTable();
+
+    <span class="hljs-keyword">void</span> Insert(data_t key, <span class="hljs-keyword">int</span> <span class="hljs-keyword">value</span>);
+    <span class="hljs-keyword">void</span> Delete(data_t key, <span class="hljs-keyword">int</span> <span class="hljs-keyword">value</span>);
+    <span class="hljs-keyword">int</span> Count(data_t key);
+    vector_t Fetch(data_t key);
+
+    <span class="hljs-keyword">int</span> TotalRecords();
+};</code></pre>
+
+<p><strong>散列索引主要用在数据表的主键上，无法通过[CREATE INDEX]创建，不支持删除。</strong></p>
+
+<p>如果有如下语句：</p>
+
+
+
+<pre class="prettyprint"><code class="language-sql hljs "><span class="hljs-operator"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">TABLE</span> customer(
+    id <span class="hljs-keyword">INT</span>(<span class="hljs-number">10</span>) <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">NULL</span>,
+    name <span class="hljs-keyword">VARCHAR</span>(<span class="hljs-number">25</span>) <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">NULL</span>,
+    gender <span class="hljs-keyword">VARCHAR</span>(<span class="hljs-number">1</span>) <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">NULL</span>,
+    <span class="hljs-keyword">PRIMARY</span> <span class="hljs-keyword">KEY</span> (id)
+);</span></code></pre>
+
+<p>则会对<code>id</code>字段建立一个<code>HashTable</code>。</p>
+
+<p>如果有如下语句：</p>
+
+
+
+<pre class="prettyprint"><code class="language-sql hljs "><span class="hljs-operator"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">TABLE</span> price(
+    website_id <span class="hljs-keyword">INT</span>(<span class="hljs-number">10</span>) <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">NULL</span>,
+    book_id <span class="hljs-keyword">INT</span>(<span class="hljs-number">10</span>) <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">NULL</span>,
+    price <span class="hljs-keyword">FLOAT</span> <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">NULL</span>,
+    <span class="hljs-keyword">PRIMARY</span> <span class="hljs-keyword">KEY</span> (website_id,book_id),
+    <span class="hljs-keyword">FOREIGN</span> <span class="hljs-keyword">KEY</span> (website_id) <span class="hljs-keyword">REFERENCES</span> website(id),
+    <span class="hljs-keyword">FOREIGN</span> <span class="hljs-keyword">KEY</span> (book_id) <span class="hljs-keyword">REFERENCES</span> book(id)
+);</span></code></pre>
+
+<p><strong>则首先会对<code>website_id</code>和<code>book_id</code>的“联合属性”（就是将其拼起来）建<code>HashTable</code>，然后会对<code>website_id</code>和<code>book_id</code>分别建立<code>MultiHashTable</code>。</strong></p>
+
+<p><strong>散列索引的特性在于，如果知道了某个记录的任一主键的值，都可以通过查询<code>HashTable</code>或者<code>MultiHashTable</code>非常快的获取相关记录，在查询优化时我们将看到其作用。</strong></p>
+
+
+
+<h3 id="查询解析模块">查询解析模块</h3>
+
+<p>为了查询解析模块的鲁棒性，我们的系统采用lex+yacc的组合解析查询，其文法可在<code>frontend/parse.y</code>和<code>frontend/scan.l</code>中查看。</p>
+
+<p>在<code>frontend</code>目录中，核心功能就是解析查询命令，将其瓶装成符合<code>engine</code>的格式并提交，<code>engine</code>模块则会根据不同的命令选择最佳的方式执行。</p>
+
+
+
+<h3 id="系统管理模块">系统管理模块</h3>
+
+<p><code>engine</code>目录即是整个系统的核心，其组合了各个模块，最终将命令与操作对接起来。</p>
+
+
+
+<h4 id="创建">创建</h4>
+
+<p>操作数据库的第一步是创建数据库，并定义好相关表结构。</p>
+
+<p>数据库操作接口如下：</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cs"><span class="hljs-comment">// engine/dbop.h</span>
+<span class="hljs-keyword">void</span> show_databases(Context* ctx);
+<span class="hljs-keyword">void</span> create_database(Context* ctx, <span class="hljs-keyword">const</span> <span class="hljs-keyword">string</span>&amp; db_name);
+<span class="hljs-keyword">void</span> drop_database(Context* ctx, <span class="hljs-keyword">const</span> <span class="hljs-keyword">string</span>&amp; db_name);
+<span class="hljs-keyword">void</span> use_database(Context* ctx, <span class="hljs-keyword">const</span> <span class="hljs-keyword">string</span>&amp; db_name);</code></pre>
+
+<p>表操作接口如下：</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cpp"><span class="hljs-comment">// engine/tableop.h</span>
+<span class="hljs-keyword">void</span> show_tables(Context* ctx);
+<span class="hljs-keyword">void</span> create_table(Context* ctx, 
+    <span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; tb_name,
+    <span class="hljs-keyword">const</span> <span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;ColumnDefine&gt;</span>&amp; cols,
+    <span class="hljs-keyword">const</span> <span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;<span class="hljs-built_in">string</span>&gt;</span>&amp; primary_cols,
+    <span class="hljs-keyword">const</span> <span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;ColumnForeign&gt;</span>&amp; foreign_cols,
+    <span class="hljs-keyword">const</span> <span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;ScopeLimit&gt;</span>&amp; scope_limits);
+<span class="hljs-keyword">void</span> drop_table(Context* ctx, <span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; tb_name);
+<span class="hljs-keyword">void</span> desc_table(Context* ctx, <span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; tb_name);</code></pre>
+
+
+
+<h4 id="数据类型转换">*数据类型转换</h4>
+
+<p>在很多时候，需要进行数据转换，这是由于输入的数据类型很少但是储存支持的数据类型，比如：输入中的<code>string</code>类型可以转换为储存的<code>char</code>/<code>varchar</code>/<code>date</code>类型，输入的<code>int</code>类型可以转化储存的<code>int</code>/<code>float</code>/<code>decimal</code>类型，而输入的<code>string</code>还可以在查询中转化<code>regex</code>类型。</p>
+
+<p>所以，在很多操作进行之前，需要对输入的数据进行转化，并进一步变成可以储存和参与比较的<code>data_t</code>类型，同时，类型判断也是在这一步进行的。</p>
+
+<p>在<code>engine</code>中，输入的值用<code>Value</code>类表示：</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cs"><span class="hljs-comment">// engine/crudop.h</span>
+class Value
+{
+<span class="hljs-keyword">public</span>:
+    <span class="hljs-keyword">enum</span> ValueType { VALUE_INT, VALUE_STRING, VALUE_FLOAT, VALUE_NULL,
+        VALUE_DECIMAL <span class="hljs-comment">/*定点数，只能转换*/</span>,
+        VALUE_REGEXP <span class="hljs-comment">/*正则表达式，只能转换*/</span>
+    };
+    ValueType value_type;
+    data_t data;
+    <span class="hljs-keyword">string</span> origin_value;
+    regex reg;
+
+    <span class="hljs-keyword">static</span> Value int_value(<span class="hljs-keyword">const</span> <span class="hljs-keyword">string</span>&amp; <span class="hljs-keyword">value</span>);
+    <span class="hljs-keyword">static</span> Value float_value(<span class="hljs-keyword">const</span> <span class="hljs-keyword">string</span>&amp; <span class="hljs-keyword">value</span>);
+    <span class="hljs-keyword">static</span> Value string_value(<span class="hljs-keyword">const</span> <span class="hljs-keyword">string</span>&amp; <span class="hljs-keyword">value</span>);
+    <span class="hljs-keyword">static</span> Value null_value();
+    Json basic_to_json();
+
+    <span class="hljs-keyword">bool</span> string_to_date();
+    <span class="hljs-keyword">void</span> int_to_float();
+    <span class="hljs-keyword">void</span> float_to_decimal();
+    <span class="hljs-keyword">void</span> int_to_decimal();
+    <span class="hljs-keyword">void</span> string_to_regexp();
+
+    <span class="hljs-keyword">string</span> stringify() <span class="hljs-keyword">const</span>;
+};</code></pre>
+
+<p>同时，在<code>engine/helper.h</code>中提供了一个用于转换和判断类型的函数：</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cs"><span class="hljs-comment">// engine/helper.h</span>
+<span class="hljs-comment">// 类型检查</span>
+<span class="hljs-keyword">bool</span> value_type_trans_ok(type_t type, Value&amp; <span class="hljs-keyword">value</span>);</code></pre>
+
+
+
+<h4 id="插入">插入</h4>
+
+<p>插入数据的流程如下：</p>
+
+<ol>
+<li><p>数据列数目检查</p></li>
+<li><p>类型检查</p></li>
+<li><p>数据合法性检查（外键依赖，域约束等）</p></li>
+<li><p>在数据文件中添加记录</p></li>
+<li><p>在相关索引文件中添加记录</p></li>
+</ol>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cpp"><span class="hljs-comment">// engine/crudop.h</span>
+<span class="hljs-keyword">void</span> insert_op(Context* ctx, <span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; tb_name, <span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;<span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;Value&gt;</span> &gt;</span> values_list);</code></pre>
+
+
+
+<h4 id="删除">删除</h4>
+
+<p>查询的处理流程如下：</p>
+
+<ol>
+<li><p>查询条件的合法性检查（类型检查等）</p></li>
+<li><p>获取满足条件数据的rid列表</p></li>
+<li><p>删除满足条件的结果</p></li>
+<li><p>查询上一步的外键依赖关系，如果有依赖则跳到3</p></li>
+</ol>
+
+<p><strong>外键约束除了插入的时候对应记录必须存在外，还要求在对方删除的时候一并删除有依赖关系的数据，并且此操作可能会出发很多层，所以第3步和第4布会多次执行，在代码中使用递归来实现。</strong></p>
+
+<p>比如：</p>
+
+
+
+<pre class="prettyprint"><code class="language-sql hljs "><span class="hljs-operator"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">TABLE</span> price(
+    website_id <span class="hljs-keyword">INT</span>(<span class="hljs-number">10</span>) <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">NULL</span>,
+    book_id <span class="hljs-keyword">INT</span>(<span class="hljs-number">10</span>) <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">NULL</span>,
+    price <span class="hljs-keyword">FLOAT</span> <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">NULL</span>,
+    <span class="hljs-keyword">PRIMARY</span> <span class="hljs-keyword">KEY</span> (website_id,book_id),
+    <span class="hljs-keyword">FOREIGN</span> <span class="hljs-keyword">KEY</span> (website_id) <span class="hljs-keyword">REFERENCES</span> website(id),
+    <span class="hljs-keyword">FOREIGN</span> <span class="hljs-keyword">KEY</span> (book_id) <span class="hljs-keyword">REFERENCES</span> book(id)
+);</span></code></pre>
+
+<p>在删除<code>website</code>的<code>id</code>为10的记录之后，同时也要删除<code>price</code>表<code>website_id</code>也为10的记录。</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cpp"><span class="hljs-comment">// engine/crudop.h</span>
+<span class="hljs-keyword">void</span> delete_op(Context* ctx, <span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; tb_name, <span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;Condition&gt;</span> conditions);</code></pre>
+
+
+
+<h4 id="更新">更新</h4>
+
+<p>更新数据处理流程：</p>
+
+<ol>
+<li><p>查询条件的合法性检查（类型检查等）</p></li>
+<li><p>更新语句和发现检查（类型检查等）</p></li>
+<li><p>获取满足条件数据的rid列表</p></li>
+<li><p>对于每条满足条件的记录，删除原记录并插入新记录，如果新记录不合法则不修改</p></li>
+</ol>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cpp"><span class="hljs-comment">// engine/crudop.h</span>
+<span class="hljs-keyword">void</span> update_op(Context* ctx, <span class="hljs-keyword">const</span> <span class="hljs-built_in">string</span>&amp; tb_name, <span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;Assignment&gt;</span> assignments, <span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;Condition&gt;</span> conditions);</code></pre>
+
+
+
+<h4 id="查询">查询</h4>
+
+<p>查询的处理流程：</p>
+
+<ol>
+<li><p>为没有指明表名的列查询一个合法的表名</p></li>
+<li><p>检查查询条件是否合法（类型检查等）</p></li>
+<li><p>对查询的表排序，确定一个最优查询顺序（在查询优化部分细讲）</p></li>
+<li><p>确定每个表的依赖关系</p></li>
+<li><p>对没有被依赖的表查询出结果</p></li>
+<li><p>分析<code>Selector</code>确定要查询那些记录</p></li>
+<li><p>为了支持多表查询，递归搜索每个表的每个合法记录，如果当前表和前面的表有依赖关系则直接通过查询索引搜索（在查询优化部分细讲）</p></li>
+<li><p>输出查询结果</p></li>
+</ol>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cpp"><span class="hljs-comment">// engine/crudop.h</span>
+<span class="hljs-keyword">void</span> select_op(Context* ctx, Selector selector, <span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;<span class="hljs-built_in">string</span>&gt;</span> tables, <span class="hljs-stl_container"><span class="hljs-built_in">vector</span>&lt;Condition&gt;</span> conditions);</code></pre>
+
+
+
+<h4 id="查询优化">*查询优化</h4>
+
+<p><strong>查询优化分为两类：一类是单表查询优化，另一类是多表查询优化。但是这两类并不冲突，可以同时使用。</strong></p>
+
+<p>对于单表查询优化， <strong>由于条件与条件之间只有AND关系，所以条件越多满足的记录就越少。</strong> 考虑到某些表我们建有索引，而对建有索引的字段进行查询是可以预估有多少个满足条件的记录，所以对于单表查询可以做的优化就是 <strong>枚举每个条件，选择建有索引并且预估结果最少的条件先查询，然后再对其他条件进行判断。</strong></p>
+
+<p>在<code>engine/helper.h</code>中提供了一个函数完成此功能：</p>
+
+
+
+<pre class="prettyprint"><code class="language-c++ hljs cs"><span class="hljs-comment">// engine/helper.h</span>
+<span class="hljs-comment">// 统计满足条件的数量，无法统计则返回INF</span>
+<span class="hljs-keyword">int</span> calculate_condition_count(TableDesc::ptr td, <span class="hljs-keyword">const</span> Condition&amp; cond);</code></pre>
+
+<p>比如如下查询:</p>
+
+
+
+<pre class="prettyprint"><code class="language-sql hljs "><span class="hljs-operator"><span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">FROM</span> website <span class="hljs-keyword">WHERE</span> name=<span class="hljs-string">'tb'</span> <span class="hljs-keyword">AND</span> id=<span class="hljs-number">1000</span>;</span></code></pre>
+
+<p>由于我们对<code>id</code>建了索引，所以可以预估满足<code>id=1000</code>的记录的数量，对这些记录再判断<code>name='tb'</code>，即可查询所有记录。</p>
+
+<p>对于多表查询优化，其核心在于对查询的表重新排序并建立表与表之间的联系，核心规则如下：</p>
+
+<ol>
+<li><p>优先查询有约束的表</p></li>
+<li><p><strong>根据外键约束对剩余表进行拓扑排序</strong></p></li>
+<li><p>根据外键建立表与表之间的联系</p></li>
+</ol>
+
+<p>比如有如下查询：</p>
+
+
+
+<pre class="prettyprint"><code class="language-sql hljs "><span class="hljs-operator"><span class="hljs-keyword">SELECT</span> * <span class="hljs-keyword">FROM</span> website, book, price <span class="hljs-keyword">WHERE</span> website.id=price.website_id <span class="hljs-keyword">AND</span> book.id=price.book_id <span class="hljs-keyword">AND</span> book.title=<span class="hljs-string">'The New Kid on the Block'</span>;</span></code></pre>
+
+<p>注意到由于对表<code>book</code>的查询存在一个表内的约束<code>book.title='The New Kid on the Block'</code>，所以将<code>book</code>排在最前面，另外两个表<code>website, price</code>由于<code>website.id=price.website_id</code>的存在，在拓扑排序的时候会建一条从<code>price</code>到<code>website</code>的边，其拓扑排序的结果是<code>price, website</code>。</p>
+
+<p>所以，最终查询的顺序是<code>book, price, website</code>。</p>
+
+<p>然后是建立表与表之间的关系，由于<code>website.id=price.website_id</code>的存在，当<code>price</code>记录已知时即可通过<code>HashTable</code>查询<code>website</code>的值，同样，<code>book.id=price.book_id</code>是的当<code>book</code>已知即可通过<code>MultiHashTable</code>查询<code>price</code>的值，所以只有<code>book</code>是需要单独查询的，而<code>book</code>可以使用单表查询优化。</p>
+
+<p>至此，查询优化结束，对于简单的查询我们的程序已经可以很快的出结果了。</p>
+
+<p>具体查询优化的代码可以查看<code>engine/crudop.cpp</code>，拓扑排序在<code>engine/topsort.h</code>中。</p>
+
+
+
+<h4 id="其他">*其他</h4>
+
+<ul>
+<li><p>聚集查询：聚集查询是特殊的查询，目前支持AVG,SUM,MIN,MAX,COUNT查询，目前的办法是在查询过程中统计相关信息，在查询结束后输出</p></li>
+<li><p>模糊查询：将要查询的字符串转换为正则表达式，然后依次比较</p></li>
+<li><p>属性域约束：在创建表时通过<code>CHECK</code>和<code>IN</code>建立约束，然后在插入和修改出检查属性是否符合条件</p></li>
+</ul>
+
+
+
+<h3 id="ui模块">UI模块</h3>
+
+<p>UI模块使用django实现了一个简易的网页。网页中提供一个搜索框用于输入sql语句，UI模块会将此sql语句，加上所处的数据库位置等信息封装成一系列sql语句，交给底层模块获取结果，然后通过网页展示出来。</p>
+
+
+
+<h2 id="小组分工">小组分工</h2>
+
+<ul>
+<li><p>季智成</p>
+
+<ul><li>存储模块中与文件系统的交互</li>
+<li>封装manager类，实现了二进制记录与文件的相关操作，包括插入删除查找。</li>
+<li>索引模块中b+树的维护</li>
+<li>实现包括文件与记录的相关操作</li>
+<li>GUI</li></ul></li>
+<li><p>陈宇</p>
+
+<ul><li>页式文件系统</li>
+<li>数据库结构描述</li>
+<li>记录的序列化与反序列化，支持多种数据类型</li>
+<li>前端使用yac+lexer对命令解析</li>
+<li>核心引擎，和各个模块交互</li>
+<li>基础数据结构(typedef shared_ptr</li></ul></li></ul>
+
+<h2 id="参考文献">参考文献</h2>
+
+<ul>
+<li>《算法设计》</li>
+<li>《算法导论》</li>
+</ul>
+
+
+
+<h2 id="项目源码">项目源码</h2>
+
+
+
+<h3 id="github仓库地址">github仓库地址</h3>
+
+<p><a href="https://github.com/jzc15/SqlProject">https://github.com/jzc15/SqlProject</a></p>
+
+
+
+<h3 id="目录说明">目录说明</h3>
+
+<ul>
+<li><p><code>datamanager</code> : 数据管理模块，定义了槽文件系统和向量文件系统</p></li>
+<li><p><code>ddf</code> : 数据库/数据表描诉文件，实现了数据库/表/记录的描述类，实现了记录序列化/反序列化等接口</p></li>
+<li><p><code>disk</code> : 页式文件系统，以及其他和磁盘交互的接口</p></li>
+<li><p><code>frontend</code> : 前段模块，负责解析命令</p></li>
+<li><p><code>json11</code> : 外部引用json模块</p></li>
+<li><p><code>engine</code> : 核心引擎，负责组合各个模块，完成增删查改等各个指令</p></li>
+<li><p><code>indices</code> : 索引模块，实现了B+树索引，唯一键值散列索引，可重键值散列索引</p></li>
+<li><p><code>src</code> : 入口程序，每个文件代表一个可执行文件，包含main以及各个模块的单元测试</p></li>
+<li><p><code>ui</code> : 网页GUI</p></li>
+</ul>
+
+
+
+<h3 id="环境安装">环境安装</h3>
+
+<ul>
+<li>解析部分，使用lex&amp;yacc</li>
+</ul>
+
+
+
+<pre class="prettyprint"><code class="language-sh hljs bash">&gt; <span class="hljs-built_in">sudo</span> apt-get install flex bison</code></pre>
+
+<ul>
+<li>GUI部分，使用python3，django2.0</li>
+</ul>
+
+
+
+<pre class="prettyprint"><code class="language-sh hljs markdown"><span class="hljs-blockquote">&gt; sudo apt-get python3</span>
+<span class="hljs-blockquote">&gt; sudo apt-get python3-pip</span>
+<span class="hljs-blockquote">&gt; pip3 install django</span></code></pre>
+
+
+
+<h3 id="编译与运行">编译与运行</h3>
+
+<ul>
+<li>编译</li>
+</ul>
+
+
+
+<pre class="prettyprint"><code class="language-sh hljs markdown"><span class="hljs-blockquote">&gt; mkdir build</span>
+<span class="hljs-blockquote">&gt; cd build</span>
+<span class="hljs-blockquote">&gt; cmake ..</span>
+<span class="hljs-blockquote">&gt; make</span></code></pre>
+
+<ul>
+<li>运行</li>
+</ul>
+
+
+
+<pre class="prettyprint"><code class="language-sh hljs cs">&gt; ./main ../dataset/<span class="hljs-keyword">select</span>.sql</code></pre>
+
+
+
+<h3 id="gui运行说明">GUI运行说明</h3>
+
+
+
+<pre class="prettyprint"><code class="language-sh hljs markdown"><span class="hljs-blockquote">&gt; cd ui</span>
+<span class="hljs-blockquote">&gt; python3 manager.py runserver</span>
+<span class="hljs-blockquote">&gt; # open browser http://127.0.0.1:3000</span></code></pre></div></body>
+</html>

@@ -14,7 +14,8 @@ using namespace std;
  * char(x) 字符串,定长
  * varchar(x) 字符串,变长
  * date 日期，定长，存时间戳，time_t
- * float 浮点数，定长，双精度
+ * float 浮点数，定长，单精度
+ * decimal 定点数，定长
  **/
 
 #define INT_TYPE ("int")
@@ -34,7 +35,7 @@ enum type_t {
 };
 
 size_t type_size(const string& typeName); // 该类型单个元素的大小
-bool is_type_fixed(const string& typeName);
+bool is_type_fixed(const string& typeName); // 是否是定长类型
 type_t type_enum(const string& typeName);
 string type_name(type_t type_enum);
 
@@ -47,6 +48,7 @@ data_t add(type_t type, data_t data_a, data_t data_b);
 // data / n
 data_t div(type_t type, data_t data, int n);
 
+// 序列化为可以输出的内容
 string stringify(type_t type, data_t data);
 
 #endif // _TYPE_INFO_H

@@ -17,12 +17,12 @@ public:
 
     static void RemoveIndex(const string& filename);
 
-    void Insert(data_t key, int value);
-    void Delete(data_t key);
-    bool Exists(data_t key);
-    int Fetch(data_t key);
+    void Insert(data_t key, int value); // 插入
+    void Delete(data_t key); // 删除
+    bool Exists(data_t key); // 是否存在
+    int Fetch(data_t key); // 获取
 
-    int TotalRecords();
+    int TotalRecords(); // 记录总数
 
 private:
     struct header_t // 页首

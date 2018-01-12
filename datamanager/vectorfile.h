@@ -8,7 +8,7 @@ using namespace std;
 
 typedef shared_ptr<vector<int>> vector_t;
 
-// 储存int
+// 储存int数组
 class VectorFile
 {
 public:
@@ -16,9 +16,9 @@ public:
     VectorFile(const string& filename);
     ~VectorFile();
 
-    int NewVector(int value);
-    vector_t Fetch(int pos);
-    int Save(int opos, vector_t data, bool append_only = false); // 是否只有增加
+    int NewVector(int value); // 新数组，返回位置
+    vector_t Fetch(int pos); // 获取对应位置的数组
+    int Save(int opos, vector_t data, bool append_only = false); // 储存，append_only=是否只有增加
 
     void Flush();
 
